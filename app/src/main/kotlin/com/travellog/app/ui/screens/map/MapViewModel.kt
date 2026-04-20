@@ -13,6 +13,7 @@ import com.travellog.app.data.repository.VoiceNoteRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
+import android.location.Location
 import javax.inject.Inject
 
 @HiltViewModel
@@ -43,6 +44,12 @@ class MapViewModel @Inject constructor(
         .flatMapLatest { dayId -> poiRepository.getCheckedInPoisForDay(dayId) }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
 
+    val availablePois: StateFlow<List<PointOfInterest>> = _selectedDayId
+        .filterNotNull()
+        .flatMapLatest { dayId -> poiRepository.getPoisForDay(dayId) }
+        .map { pois -> pois.filter { !it.checkedIn } }
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
+
     val voiceNotes: StateFlow<List<VoiceNote>> = _selectedDayId
         .filterNotNull()
         .flatMapLatest { dayId -> voiceNoteRepository.getVoiceNotesForDay(dayId) }
@@ -57,5 +64,12 @@ class MapViewModel @Inject constructor(
 
     fun selectDay(dayId: Long) {
         _selectedDayId.value = dayId
+    }
+
+    fun checkIn(poiId: Long) {
+        viewModelScope.launch {
+            val dayId = _selectedDayId.value ?: return@launch
+            poiRepository.checkIn(poiId, dayId, null)
+        }
     }
 }

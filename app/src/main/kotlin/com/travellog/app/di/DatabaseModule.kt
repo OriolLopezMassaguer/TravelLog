@@ -19,6 +19,7 @@ object DatabaseModule {
     @Singleton
     fun provideDatabase(@ApplicationContext context: Context): TravelLogDatabase =
         Room.databaseBuilder(context, TravelLogDatabase::class.java, "travellog.db")
+            .addMigrations(TravelLogDatabase.MIGRATION_1_2)
             .build()
 
     @Provides fun provideTravelDayDao(db: TravelLogDatabase): TravelDayDao = db.travelDayDao()

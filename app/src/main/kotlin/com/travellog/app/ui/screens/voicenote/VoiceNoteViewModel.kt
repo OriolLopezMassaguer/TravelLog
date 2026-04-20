@@ -37,6 +37,8 @@ sealed class RecordingState {
         val voiceNoteId: Long,
         val durationSeconds: Int,
         val associatedPoiName: String?,
+        val transcription: String? = null,
+        val isTranscribing: Boolean = false,
     ) : RecordingState()
 
     data class Error(val message: String) : RecordingState()
@@ -115,8 +117,13 @@ class VoiceNoteViewModel @Inject constructor(
             _state.value = RecordingState.Saved(
                 voiceNoteId       = note.id,
                 durationSeconds   = result.durationSeconds,
-                associatedPoiName = current.nearestPoiName
+                associatedPoiName = current.nearestPoiName,
+                isTranscribing    = true,
             )
+
+            val transcription = voiceNoteRepository.transcribeAndSave(note)
+            val saved = _state.value as? RecordingState.Saved ?: return@launch
+            _state.value = saved.copy(transcription = transcription, isTranscribing = false)
         }
     }
 

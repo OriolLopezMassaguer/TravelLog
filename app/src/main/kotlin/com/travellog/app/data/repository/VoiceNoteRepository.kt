@@ -1,6 +1,7 @@
 package com.travellog.app.data.repository
 
 import android.location.Location
+import com.travellog.app.audio.WhisperTranscriptionService
 import com.travellog.app.data.db.dao.CheckInDao
 import com.travellog.app.data.db.dao.MediaItemDao
 import com.travellog.app.data.db.dao.PoiDao
@@ -8,6 +9,7 @@ import com.travellog.app.data.db.dao.VoiceNoteDao
 import com.travellog.app.data.db.entity.MediaItem
 import com.travellog.app.data.db.entity.VoiceNote
 import kotlinx.coroutines.flow.Flow
+import java.io.File
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -17,6 +19,7 @@ class VoiceNoteRepository @Inject constructor(
     private val mediaItemDao: MediaItemDao,
     private val poiDao: PoiDao,
     private val checkInDao: CheckInDao,
+    private val whisperService: WhisperTranscriptionService,
 ) {
     fun getVoiceNotesForDay(dayId: Long): Flow<List<VoiceNote>> =
         voiceNoteDao.getVoiceNotesForDay(dayId)
@@ -71,6 +74,12 @@ class VoiceNoteRepository @Inject constructor(
 
         val id = voiceNoteDao.insert(note)
         return note.copy(id = id)
+    }
+
+    suspend fun transcribeAndSave(voiceNote: VoiceNote): String? {
+        val text = whisperService.transcribe(File(voiceNote.filePath)) ?: return null
+        voiceNoteDao.setTranscription(voiceNote.id, text)
+        return text
     }
 
     // ── Association ───────────────────────────────────────────────────────────

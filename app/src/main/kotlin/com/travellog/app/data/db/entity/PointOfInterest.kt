@@ -14,7 +14,7 @@ import androidx.room.PrimaryKey
         childColumns = ["day_id"],
         onDelete = ForeignKey.CASCADE
     )],
-    indices = [Index("day_id"), Index("external_id")]
+    indices = [Index("day_id"), Index(value = ["external_id", "day_id"], unique = true)]
 )
 data class PointOfInterest(
     @PrimaryKey(autoGenerate = true) val id: Long = 0,

@@ -215,6 +215,29 @@ private fun SavedContent(state: RecordingState.Saved, onDone: () -> Unit) {
             color = MaterialTheme.colorScheme.primary
         )
     }
+    Spacer(Modifier.height(12.dp))
+    when {
+        state.isTranscribing -> {
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                CircularProgressIndicator(modifier = Modifier.size(16.dp), strokeWidth = 2.dp)
+                Text("Transcribing…", style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant)
+            }
+        }
+        state.transcription != null -> {
+            Text("Transcript", style = MaterialTheme.typography.labelMedium,
+                color = MaterialTheme.colorScheme.primary)
+            Spacer(Modifier.height(4.dp))
+            Text(
+                state.transcription,
+                style = MaterialTheme.typography.bodyMedium,
+                modifier = Modifier.fillMaxWidth()
+            )
+        }
+    }
     Spacer(Modifier.height(24.dp))
     Button(onClick = onDone, modifier = Modifier.fillMaxWidth()) { Text("Done") }
     Spacer(Modifier.height(16.dp))

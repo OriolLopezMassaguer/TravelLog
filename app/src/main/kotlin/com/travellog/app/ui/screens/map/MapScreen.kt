@@ -57,8 +57,11 @@ private const val TRACK_LAYER  = "track-layer"
 private const val POI_SOURCE      = "poi-source"
 private const val POI_LAYER       = "poi-layer"
 private const val POI_LABEL_LAYER = "poi-label-layer"
-private const val VN_SOURCE       = "vn-source"
-private const val VN_LAYER        = "vn-layer"
+private const val VN_SOURCE            = "vn-source"
+private const val VN_LAYER             = "vn-layer"
+private const val AVAILABLE_POI_SOURCE = "available-poi-source"
+private const val AVAILABLE_POI_LAYER  = "available-poi-layer"
+private const val AVAILABLE_POI_LABEL  = "available-poi-label-layer"
 
 @Composable
 fun MapScreen(
@@ -69,13 +72,16 @@ fun MapScreen(
     val context      = LocalContext.current
     val lifecycle    = LocalLifecycleOwner.current
 
-    val days          by viewModel.days.collectAsStateWithLifecycle()
-    val selectedDayId by viewModel.selectedDayId.collectAsStateWithLifecycle()
-    val trackPoints   by viewModel.trackPoints.collectAsStateWithLifecycle()
-    val checkedInPois by viewModel.checkedInPois.collectAsStateWithLifecycle()
-    val voiceNotes    by viewModel.voiceNotes.collectAsStateWithLifecycle()
+    val days           by viewModel.days.collectAsStateWithLifecycle()
+    val selectedDayId  by viewModel.selectedDayId.collectAsStateWithLifecycle()
+    val trackPoints    by viewModel.trackPoints.collectAsStateWithLifecycle()
+    val checkedInPois  by viewModel.checkedInPois.collectAsStateWithLifecycle()
+    val availablePois  by viewModel.availablePois.collectAsStateWithLifecycle()
+    val voiceNotes     by viewModel.voiceNotes.collectAsStateWithLifecycle()
 
     var showRecorder by remember { mutableStateOf(false) }
+    // Holds the POI the user tapped on the map, triggering the check-in dialog
+    val checkinDialogPoi = remember { mutableStateOf<PointOfInterest?>(null) }
 
     // ── Permissions ──────────────────────────────────────────────────────────
     var locationGranted by remember {
@@ -134,8 +140,19 @@ fun MapScreen(
             map.setStyle(STYLE_URL) { style ->
                 styleRef = style
                 initTrackLayer(style)
+                initAvailablePoiLayer(style)
                 initPoiLayer(style)
                 initVoiceNoteLayer(style)
+            }
+            map.addOnMapClickListener { latLng ->
+                val screenPoint = map.projection.toScreenLocation(latLng)
+                val features = map.queryRenderedFeatures(screenPoint, AVAILABLE_POI_LAYER)
+                if (features.isNotEmpty()) {
+                    val id = features[0].getNumberProperty("id")?.toLong()
+                        ?: return@addOnMapClickListener false
+                    checkinDialogPoi.value = viewModel.availablePois.value.find { it.id == id }
+                    checkinDialogPoi.value != null
+                } else false
             }
         }
     }
@@ -153,7 +170,13 @@ fun MapScreen(
         updateTrackPolyline(s, trackPoints)
     }
 
-    // Update POI markers whenever style or checked-in POIs change
+    // Update available (not yet checked-in) POI markers
+    LaunchedEffect(styleRef, availablePois) {
+        val s = styleRef ?: return@LaunchedEffect
+        updateAvailablePoiMarkers(s, availablePois)
+    }
+
+    // Update checked-in POI markers whenever style or checked-in POIs change
     LaunchedEffect(styleRef, checkedInPois) {
         val s = styleRef ?: return@LaunchedEffect
         updatePoiMarkers(s, checkedInPois)
@@ -209,6 +232,24 @@ fun MapScreen(
             )
         }
 
+        // Check-in dialog shown when user taps an available POI marker
+        checkinDialogPoi.value?.let { poi ->
+            AlertDialog(
+                onDismissRequest = { checkinDialogPoi.value = null },
+                title = { Text(poi.name) },
+                text  = { Text(poi.category + if (poi.address != null) "\n${poi.address}" else "") },
+                confirmButton = {
+                    Button(onClick = {
+                        viewModel.checkIn(poi.id)
+                        checkinDialogPoi.value = null
+                    }) { Text("Check In") }
+                },
+                dismissButton = {
+                    TextButton(onClick = { checkinDialogPoi.value = null }) { Text("Cancel") }
+                }
+            )
+        }
+
         // My location
         SmallFloatingActionButton(
             onClick = {
@@ -251,6 +292,42 @@ private fun updateTrackPolyline(style: Style, points: List<TrackPoint>) {
     }
     val coords = points.map { Point.fromLngLat(it.longitude, it.latitude) }
     source.setGeoJson(Feature.fromGeometry(LineString.fromLngLats(coords)))
+}
+
+private fun initAvailablePoiLayer(style: Style) {
+    style.addSource(GeoJsonSource(AVAILABLE_POI_SOURCE, FeatureCollection.fromFeatures(emptyList())))
+    style.addLayer(
+        CircleLayer(AVAILABLE_POI_LAYER, AVAILABLE_POI_SOURCE).withProperties(
+            PropertyFactory.circleColor("#1565C0"),
+            PropertyFactory.circleRadius(8f),
+            PropertyFactory.circleStrokeColor("#FFFFFF"),
+            PropertyFactory.circleStrokeWidth(2f),
+            PropertyFactory.circleOpacity(0.75f)
+        )
+    )
+    style.addLayer(
+        SymbolLayer(AVAILABLE_POI_LABEL, AVAILABLE_POI_SOURCE).withProperties(
+            PropertyFactory.textField("{name}"),
+            PropertyFactory.textSize(10f),
+            PropertyFactory.textColor("#0D47A1"),
+            PropertyFactory.textHaloColor("#FFFFFF"),
+            PropertyFactory.textHaloWidth(1.5f),
+            PropertyFactory.textOffset(arrayOf(0f, -1.8f)),
+            PropertyFactory.textAnchor(Property.TEXT_ANCHOR_BOTTOM)
+        )
+    )
+}
+
+private fun updateAvailablePoiMarkers(style: Style, pois: List<PointOfInterest>) {
+    val source = style.getSource(AVAILABLE_POI_SOURCE) as? GeoJsonSource ?: return
+    val features = pois.map { poi ->
+        Feature.fromGeometry(Point.fromLngLat(poi.longitude, poi.latitude)).apply {
+            addStringProperty("name", poi.name)
+            addStringProperty("category", poi.category)
+            addNumberProperty("id", poi.id)
+        }
+    }
+    source.setGeoJson(FeatureCollection.fromFeatures(features))
 }
 
 private fun initPoiLayer(style: Style) {

@@ -31,4 +31,8 @@ class SettingsViewModel @Inject constructor(
         settingsRepository.setTrackingStartHour(hour)
         trackingScheduler.schedule(startHour = hour)
     }
+
+    fun setOpenAiApiKey(key: String) = viewModelScope.launch {
+        settingsRepository.setOpenAiApiKey(key)
+    }
 }

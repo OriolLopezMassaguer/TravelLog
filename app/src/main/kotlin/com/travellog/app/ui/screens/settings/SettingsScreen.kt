@@ -3,10 +3,14 @@ package com.travellog.app.ui.screens.settings
 import androidx.compose.foundation.layout.*
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.Visibility
+import androidx.compose.material.icons.filled.VisibilityOff
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.text.input.PasswordVisualTransformation
+import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -74,6 +78,16 @@ fun SettingsScreen(
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 modifier = Modifier.padding(start = 4.dp)
             )
+
+            Spacer(Modifier.height(8.dp))
+            SectionLabel("Transcription")
+
+            ApiKeySetting(
+                label    = "OpenAI API key",
+                subLabel = "Used to transcribe voice notes via Whisper",
+                value    = settings.openAiApiKey,
+                onSave   = { viewModel.setOpenAiApiKey(it) }
+            )
         }
     }
 }
@@ -125,6 +139,40 @@ private fun <T> DropdownSetting(
             }
         }
     }
+}
+
+@Composable
+private fun ApiKeySetting(
+    label: String,
+    subLabel: String,
+    value: String,
+    onSave: (String) -> Unit,
+) {
+    var text    by remember(value) { mutableStateOf(value) }
+    var visible by remember { mutableStateOf(false) }
+
+    OutlinedTextField(
+        value         = text,
+        onValueChange = { text = it },
+        label         = { Text(label) },
+        placeholder   = { Text("sk-…") },
+        supportingText = { Text(subLabel) },
+        visualTransformation = if (visible) VisualTransformation.None
+                               else PasswordVisualTransformation(),
+        trailingIcon  = {
+            Row {
+                IconButton(onClick = { visible = !visible }) {
+                    Icon(
+                        if (visible) Icons.Default.VisibilityOff else Icons.Default.Visibility,
+                        contentDescription = if (visible) "Hide key" else "Show key"
+                    )
+                }
+                TextButton(onClick = { onSave(text) }) { Text("Save") }
+            }
+        },
+        singleLine    = true,
+        modifier      = Modifier.fillMaxWidth()
+    )
 }
 
 @Composable
