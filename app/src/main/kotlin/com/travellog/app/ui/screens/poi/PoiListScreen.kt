@@ -10,11 +10,13 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavController
+import com.travellog.app.R
 import com.travellog.app.ui.components.PoiCard
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -29,15 +31,18 @@ fun PoiListScreen(
     val error        by viewModel.error.collectAsStateWithLifecycle()
 
     var selectedTab by remember { mutableIntStateOf(0) }
-    val tabs = listOf("Nearby", "Checked In (${checkedIn.size})")
+    val tabs = listOf(
+        stringResource(R.string.poi_tab_nearby),
+        stringResource(R.string.poi_tab_checked_in, checkedIn.size),
+    )
 
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("Places") },
+                title = { Text(stringResource(R.string.poi_title)) },
                 actions = {
                     IconButton(onClick = viewModel::refresh) {
-                        Icon(Icons.Default.Refresh, contentDescription = "Refresh")
+                        Icon(Icons.Default.Refresh, contentDescription = stringResource(R.string.poi_refresh_desc))
                     }
                 }
             )
@@ -46,7 +51,9 @@ fun PoiListScreen(
             error?.let { msg ->
                 Snackbar(
                     action = {
-                        TextButton(onClick = viewModel::clearError) { Text("Dismiss") }
+                        TextButton(onClick = viewModel::clearError) {
+                            Text(stringResource(R.string.action_dismiss))
+                        }
                     }
                 ) { Text(msg) }
             }
@@ -95,9 +102,7 @@ private fun NearbyTab(
     onCheckIn: (Long) -> Unit
 ) {
     if (!isLoading && pois.isEmpty()) {
-        EmptyState(
-            message = "No places found nearby.\nTap ↻ to refresh or move to a different area."
-        )
+        EmptyState(stringResource(R.string.poi_empty_nearby))
         return
     }
 
@@ -120,7 +125,7 @@ private fun NearbyTab(
 @Composable
 private fun CheckedInTab(pois: List<com.travellog.app.data.db.entity.PointOfInterest>) {
     if (pois.isEmpty()) {
-        EmptyState(message = "No check-ins yet today.\nFind a place and tap Check In!")
+        EmptyState(stringResource(R.string.poi_empty_checked_in))
         return
     }
 

@@ -1,0 +1,121 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">TravelLog</string>
+    <string name="notification_channel_tracking">Seguiment GPS</string>
+    <string name="notification_tracking_title">TravelLog està gravant el teu recorregut</string>
+    <string name="notification_tracking_text">Seguiment GPS actiu</string>
+
+    <!-- Navigation -->
+    <string name="nav_map">Mapa</string>
+    <string name="nav_places">Llocs</string>
+    <string name="nav_media">Multimèdia</string>
+    <string name="nav_export">Exportar</string>
+    <string name="nav_settings">Configuració</string>
+
+    <!-- Common actions -->
+    <string name="action_cancel">Cancel·lar</string>
+    <string name="action_retry">Tornar a intentar</string>
+    <string name="action_dismiss">Tancar</string>
+    <string name="action_save">Desar</string>
+    <string name="action_done">Fet</string>
+    <string name="action_back">Enrere</string>
+    <string name="action_stop">Aturar</string>
+
+    <!-- Day labels -->
+    <string name="day_today">Avui</string>
+    <string name="day_yesterday">Ahir</string>
+
+    <!-- Export screen -->
+    <string name="export_title">Exportar</string>
+    <string name="export_select_day_placeholder">Selecciona un dia</string>
+    <string name="export_travel_day_label">Dia de viatge</string>
+    <string name="export_build_report">Generar informe</string>
+    <string name="export_building">Generant informe\u2026</string>
+    <string name="export_ready">Informe llest.</string>
+    <string name="export_print_pdf">Imprimir / Desar PDF</string>
+    <string name="export_share_html">Compartir HTML</string>
+    <string name="export_share_gpx">Compartir fitxers GPX</string>
+    <string name="export_no_gpx">No hi ha fitxers GPX per a aquest dia.</string>
+    <string name="export_try_again">Tornar a intentar</string>
+    <string name="export_share_html_subject">TravelLog \u2014 %1$s</string>
+
+    <!-- POI screen -->
+    <string name="poi_title">Llocs</string>
+    <string name="poi_refresh_desc">Actualitzar</string>
+    <string name="poi_tab_nearby">Propers</string>
+    <string name="poi_tab_checked_in">Visitats (%1$d)</string>
+    <string name="poi_empty_nearby">No s\'han trobat llocs propers.\nToca \u21bb per actualitzar o mou-te a una altra zona.</string>
+    <string name="poi_empty_checked_in">Sense visites registrades avui.\nTroba un lloc i toca Registrar!</string>
+
+    <!-- POI card -->
+    <string name="poi_check_in">Registrar</string>
+    <string name="poi_checked_in_desc">Registrat</string>
+    <string name="poi_category_food">Menjar i beguda</string>
+    <string name="poi_category_museum">Museu</string>
+    <string name="poi_category_attraction">Atracció</string>
+    <string name="poi_category_viewpoint">Mirador</string>
+    <string name="poi_category_accommodation">Allotjament</string>
+    <string name="poi_category_historic">Lloc històric</string>
+    <string name="poi_category_park">Parc / Jardí</string>
+    <string name="poi_category_entertainment">Entreteniment</string>
+    <string name="poi_category_other">Lloc</string>
+
+    <!-- Media screen -->
+    <string name="media_title">Multimèdia</string>
+    <string name="media_import_desc">Importar de galeria</string>
+    <string name="media_tab_photos_videos">Fotos i vídeos (%1$d)</string>
+    <string name="media_tab_voice_notes">Notes de veu (%1$d)</string>
+    <string name="media_empty_photos">Sense fotos ni vídeos.\nToca el botó d\'importar per escanejar la galeria.</string>
+    <string name="media_empty_voice_notes">Sense notes de veu.\nGrava\'n una des de la pantalla del mapa.</string>
+
+    <!-- Settings screen -->
+    <string name="settings_title">Configuració</string>
+    <string name="settings_section_gps">Seguiment GPS</string>
+    <string name="settings_gps_interval_label">Interval d\'actualització</string>
+    <string name="settings_gps_5s">5 segons</string>
+    <string name="settings_gps_10s">10 segons</string>
+    <string name="settings_gps_30s">30 segons</string>
+    <string name="settings_adaptive_gps_label">GPS adaptatiu</string>
+    <string name="settings_adaptive_gps_desc">Redueix la freqüència en estar aturat 2+ minuts</string>
+    <string name="settings_section_schedule">Horari</string>
+    <string name="settings_start_hour_label">Iniciar seguiment a les</string>
+    <string name="settings_tracking_stop_note">El seguiment sempre s\'atura a mitjanit.</string>
+    <string name="settings_section_transcription">Transcripció</string>
+    <string name="settings_openai_key_label">Clau API d\'OpenAI (opcional)</string>
+    <string name="settings_openai_key_desc">Alternativa Whisper si el reconeixement local no produeix text</string>
+    <string name="settings_show_key_desc">Mostrar clau</string>
+    <string name="settings_hide_key_desc">Amagar clau</string>
+
+    <!-- Map screen -->
+    <string name="map_record_voice_desc">Enregistrar nota de veu</string>
+    <string name="map_my_location_desc">La meva ubicació</string>
+    <string name="map_checkin_dialog_confirm">Registrar</string>
+
+    <!-- Voice recorder sheet -->
+    <string name="recorder_title">Nota de veu</string>
+    <string name="recorder_subtitle">La teva posició i els llocs propers\nes capturaran automàticament.</string>
+    <string name="recorder_tap_to_start">Toca per començar</string>
+    <string name="recorder_recording">Enregistrant\u2026</string>
+    <string name="recorder_near_place">Prop de %1$s</string>
+    <string name="recorder_saved_title">Nota de veu desada</string>
+    <string name="recorder_duration">Durada: %1$s</string>
+    <string name="recorder_linked_to">Vinculada a: %1$s</string>
+    <string name="recorder_transcribing">Transcrivint\u2026</string>
+    <string name="recorder_transcript_label">Transcripció</string>
+    <string name="recorder_error_title">Oh!</string>
+
+    <!-- HTML Report -->
+    <string name="report_default_day_title">Dia a %1$s</string>
+    <string name="report_stat_distance">Distància</string>
+    <string name="report_stat_places">Llocs visitats</string>
+    <string name="report_stat_photos">Fotos</string>
+    <string name="report_stat_videos">Vídeos</string>
+    <string name="report_stat_voice_notes">Notes de veu</string>
+    <string name="report_section_notes">Notes</string>
+    <string name="report_section_timeline">Cronologia</string>
+    <string name="report_type_checkin">Registre</string>
+    <string name="report_type_photo">Foto</string>
+    <string name="report_type_video">Vídeo</string>
+    <string name="report_type_voice_note">Nota de veu</string>
+    <string name="report_coord_label">%1$.5f, %2$.5f</string>
+</resources>

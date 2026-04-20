@@ -11,6 +11,7 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
+import androidx.compose.ui.res.stringResource
 import com.travellog.app.ui.screens.export.ExportScreen
 import com.travellog.app.ui.screens.map.MapScreen
 import com.travellog.app.ui.screens.media.MediaGalleryScreen
@@ -28,8 +29,8 @@ fun AppNavigation() {
             NavigationBar {
                 bottomNavScreens.forEach { screen ->
                     NavigationBarItem(
-                        icon = { Icon(screen.icon, contentDescription = screen.label) },
-                        label = { Text(screen.label) },
+                        icon = { Icon(screen.icon, contentDescription = stringResource(screen.labelResId)) },
+                        label = { Text(stringResource(screen.labelResId)) },
                         selected = currentDestination?.hierarchy?.any { it.route == screen.route } == true,
                         onClick = {
                             navController.navigate(screen.route) {

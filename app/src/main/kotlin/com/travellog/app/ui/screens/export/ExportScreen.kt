@@ -16,11 +16,13 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.core.content.FileProvider
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavController
+import com.travellog.app.R
 import com.travellog.app.data.db.entity.TravelDay
 import java.io.File
 import java.time.LocalDate
@@ -40,7 +42,7 @@ fun ExportScreen(
     var dropdownExpanded by remember { mutableStateOf(false) }
 
     Scaffold(
-        topBar = { TopAppBar(title = { Text("Export") }) }
+        topBar = { TopAppBar(title = { Text(stringResource(R.string.export_title)) }) }
     ) { padding ->
         Column(
             modifier = Modifier
@@ -56,10 +58,11 @@ fun ExportScreen(
                 onExpandedChange = { dropdownExpanded = it }
             ) {
                 OutlinedTextField(
-                    value            = selectedDay?.let { formatDayLabel(it) } ?: "Select a day",
+                    value            = selectedDay?.let { formatDayLabel(it) }
+                        ?: stringResource(R.string.export_select_day_placeholder),
                     onValueChange    = {},
                     readOnly         = true,
-                    label            = { Text("Travel day") },
+                    label            = { Text(stringResource(R.string.export_travel_day_label)) },
                     trailingIcon     = { ExposedDropdownMenuDefaults.TrailingIcon(dropdownExpanded) },
                     modifier         = Modifier.menuAnchor().fillMaxWidth()
                 )
@@ -89,20 +92,20 @@ fun ExportScreen(
                     ) {
                         Icon(Icons.Default.PictureAsPdf, contentDescription = null)
                         Spacer(Modifier.width(8.dp))
-                        Text("Build Report")
+                        Text(stringResource(R.string.export_build_report))
                     }
                 }
                 is ExportViewModel.ExportState.Building -> {
                     LinearProgressIndicator(modifier = Modifier.fillMaxWidth())
                     Text(
-                        "Building report…",
+                        stringResource(R.string.export_building),
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                 }
                 is ExportViewModel.ExportState.Ready -> {
                     Text(
-                        "Report ready.",
+                        stringResource(R.string.export_ready),
                         style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.primary
                     )
@@ -112,7 +115,7 @@ fun ExportScreen(
                     ) {
                         Icon(Icons.Default.PictureAsPdf, contentDescription = null)
                         Spacer(Modifier.width(8.dp))
-                        Text("Print / Save PDF")
+                        Text(stringResource(R.string.export_print_pdf))
                     }
                     OutlinedButton(
                         onClick  = { shareHtml(context, state.html, state.day.date) },
@@ -120,7 +123,7 @@ fun ExportScreen(
                     ) {
                         Icon(Icons.Default.Code, contentDescription = null)
                         Spacer(Modifier.width(8.dp))
-                        Text("Share HTML")
+                        Text(stringResource(R.string.export_share_html))
                     }
                 }
                 is ExportViewModel.ExportState.Error -> {
@@ -132,13 +135,13 @@ fun ExportScreen(
                     OutlinedButton(
                         onClick  = { viewModel.resetState() },
                         modifier = Modifier.fillMaxWidth()
-                    ) { Text("Try Again") }
+                    ) { Text(stringResource(R.string.export_try_again)) }
                 }
             }
 
             HorizontalDivider()
 
-            // GPX sharing — available once a day is selected regardless of export state
+            // GPX sharing
             selectedDay?.let { day ->
                 OutlinedButton(
                     onClick  = { shareGpxFiles(context, day) },
@@ -147,11 +150,11 @@ fun ExportScreen(
                 ) {
                     Icon(Icons.Default.Share, contentDescription = null)
                     Spacer(Modifier.width(8.dp))
-                    Text("Share GPX Files")
+                    Text(stringResource(R.string.export_share_gpx))
                 }
                 if (day.gpxTrackPath == null && day.gpxPoiPath == null) {
                     Text(
-                        "No GPX files recorded for this day yet.",
+                        stringResource(R.string.export_no_gpx),
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
@@ -199,7 +202,7 @@ private fun shareGpxFiles(context: Context, day: TravelDay) {
         putParcelableArrayListExtra(Intent.EXTRA_STREAM, ArrayList(uris))
         addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
     }
-    context.startActivity(Intent.createChooser(intent, "Share GPX Files"))
+    context.startActivity(Intent.createChooser(intent, context.getString(R.string.export_share_gpx)))
 }
 
 // ── HTML share helper ─────────────────────────────────────────────────────────
@@ -217,10 +220,10 @@ private fun shareHtml(context: Context, html: String, date: String) {
     val intent = Intent(Intent.ACTION_SEND).apply {
         type = "text/html"
         putExtra(Intent.EXTRA_STREAM, uri)
-        putExtra(Intent.EXTRA_SUBJECT, "TravelLog — $date")
+        putExtra(Intent.EXTRA_SUBJECT, context.getString(R.string.export_share_html_subject, date))
         addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
     }
-    context.startActivity(Intent.createChooser(intent, "Share HTML Report"))
+    context.startActivity(Intent.createChooser(intent, context.getString(R.string.export_share_html)))
 }
 
 // ── Formatting ────────────────────────────────────────────────────────────────

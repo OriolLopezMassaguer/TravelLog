@@ -41,7 +41,7 @@ class MediaRepository @Inject constructor(
      */
     suspend fun importMediaForDay(day: TravelDay): Int {
         val startMs = day.startedAt ?: defaultStart(day.date)
-        val endMs   = day.endedAt   ?: System.currentTimeMillis()
+        val endMs   = System.currentTimeMillis()   // always scan up to now; duplicates skipped by file-path check
 
         val deviceItems = mediaScanner.scanRange(startMs, endMs)
         var imported    = 0

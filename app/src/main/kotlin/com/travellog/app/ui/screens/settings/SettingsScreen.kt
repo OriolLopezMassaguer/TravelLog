@@ -9,12 +9,14 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavController
+import com.travellog.app.R
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -27,10 +29,10 @@ fun SettingsScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("Settings") },
+                title = { Text(stringResource(R.string.settings_title)) },
                 navigationIcon = {
                     IconButton(onClick = { navController.popBackStack() }) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(R.string.action_back))
                     }
                 }
             )
@@ -43,48 +45,49 @@ fun SettingsScreen(
                 .fillMaxSize(),
             verticalArrangement = Arrangement.spacedBy(4.dp)
         ) {
-            SectionLabel("GPS Tracking")
+            SectionLabel(stringResource(R.string.settings_section_gps))
 
-            // GPS interval
             DropdownSetting(
-                label   = "Update interval",
-                options = listOf(5 to "5 seconds", 10 to "10 seconds", 30 to "30 seconds"),
-                current = settings.gpsIntervalSeconds,
+                label   = stringResource(R.string.settings_gps_interval_label),
+                options = listOf(
+                    5  to stringResource(R.string.settings_gps_5s),
+                    10 to stringResource(R.string.settings_gps_10s),
+                    30 to stringResource(R.string.settings_gps_30s),
+                ),
+                current  = settings.gpsIntervalSeconds,
                 onSelect = { viewModel.setGpsInterval(it) }
             )
 
-            // Adaptive GPS
             SwitchSetting(
-                label    = "Adaptive GPS",
-                subLabel = "Reduce frequency when stationary for 2+ minutes",
+                label    = stringResource(R.string.settings_adaptive_gps_label),
+                subLabel = stringResource(R.string.settings_adaptive_gps_desc),
                 checked  = settings.adaptiveGps,
                 onChange = { viewModel.setAdaptiveGps(it) }
             )
 
             Spacer(Modifier.height(8.dp))
-            SectionLabel("Schedule")
+            SectionLabel(stringResource(R.string.settings_section_schedule))
 
-            // Start hour
             DropdownSetting(
-                label   = "Start tracking at",
+                label   = stringResource(R.string.settings_start_hour_label),
                 options = (6..10).map { h -> h to "%02d:00".format(h) },
-                current = settings.trackingStartHour,
+                current  = settings.trackingStartHour,
                 onSelect = { viewModel.setTrackingStartHour(it) }
             )
 
             Text(
-                "Tracking always stops at midnight.",
+                stringResource(R.string.settings_tracking_stop_note),
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 modifier = Modifier.padding(start = 4.dp)
             )
 
             Spacer(Modifier.height(8.dp))
-            SectionLabel("Transcription")
+            SectionLabel(stringResource(R.string.settings_section_transcription))
 
             ApiKeySetting(
-                label    = "OpenAI API key",
-                subLabel = "Used to transcribe voice notes via Whisper",
+                label    = stringResource(R.string.settings_openai_key_label),
+                subLabel = stringResource(R.string.settings_openai_key_desc),
                 value    = settings.openAiApiKey,
                 onSave   = { viewModel.setOpenAiApiKey(it) }
             )
@@ -164,10 +167,12 @@ private fun ApiKeySetting(
                 IconButton(onClick = { visible = !visible }) {
                     Icon(
                         if (visible) Icons.Default.VisibilityOff else Icons.Default.Visibility,
-                        contentDescription = if (visible) "Hide key" else "Show key"
+                        contentDescription = stringResource(
+                            if (visible) R.string.settings_hide_key_desc else R.string.settings_show_key_desc
+                        )
                     )
                 }
-                TextButton(onClick = { onSave(text) }) { Text("Save") }
+                TextButton(onClick = { onSave(text) }) { Text(stringResource(R.string.action_save)) }
             }
         },
         singleLine    = true,

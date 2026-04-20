@@ -7,7 +7,9 @@ import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
+import com.travellog.app.R
 import com.travellog.app.data.db.entity.TravelDay
 import java.time.LocalDate
 import java.time.format.DateTimeFormatter
@@ -43,7 +45,7 @@ fun DaySelector(
                 FilterChip(
                     selected = day.id == selectedDayId,
                     onClick = { onDaySelected(day.id) },
-                    label = { Text(day.displayLabel()) }
+                    label = { Text(day.displayLabel()) }   // displayLabel() is @Composable below
                 )
             }
         }
@@ -52,13 +54,14 @@ fun DaySelector(
 
 private val shortDateFmt = DateTimeFormatter.ofPattern("MMM d")
 
+@Composable
 private fun TravelDay.displayLabel(): String {
     val today     = LocalDate.now()
     val yesterday = today.minusDays(1)
     val dayDate   = LocalDate.parse(date)
     return when (dayDate) {
-        today     -> "Today"
-        yesterday -> "Yesterday"
+        today     -> stringResource(R.string.day_today)
+        yesterday -> stringResource(R.string.day_yesterday)
         else      -> dayDate.format(shortDateFmt)
     }
 }

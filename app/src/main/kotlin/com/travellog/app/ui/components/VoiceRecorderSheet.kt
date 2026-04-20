@@ -17,10 +17,12 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.scale
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.core.content.ContextCompat
+import com.travellog.app.R
 import com.travellog.app.ui.screens.voicenote.RecordingState
 import com.travellog.app.ui.screens.voicenote.VoiceNoteViewModel
 import kotlinx.coroutines.delay
@@ -93,10 +95,10 @@ fun VoiceRecorderSheet(
 @Composable
 private fun IdleContent(onStart: () -> Unit) {
     Spacer(Modifier.height(16.dp))
-    Text("Voice Note", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
+    Text(stringResource(R.string.recorder_title), style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
     Spacer(Modifier.height(8.dp))
     Text(
-        "Your position and nearby places will\nbe captured automatically.",
+        stringResource(R.string.recorder_subtitle),
         style = MaterialTheme.typography.bodyMedium,
         color = MaterialTheme.colorScheme.onSurfaceVariant,
         textAlign = TextAlign.Center
@@ -106,10 +108,10 @@ private fun IdleContent(onStart: () -> Unit) {
         onClick = onStart,
         modifier = Modifier.size(80.dp)
     ) {
-        Icon(Icons.Default.Mic, contentDescription = "Start recording", modifier = Modifier.size(40.dp))
+        Icon(Icons.Default.Mic, contentDescription = stringResource(R.string.recorder_title), modifier = Modifier.size(40.dp))
     }
     Spacer(Modifier.height(12.dp))
-    Text("Tap to start", style = MaterialTheme.typography.labelLarge,
+    Text(stringResource(R.string.recorder_tap_to_start), style = MaterialTheme.typography.labelLarge,
         color = MaterialTheme.colorScheme.onSurfaceVariant)
     Spacer(Modifier.height(16.dp))
 }
@@ -141,12 +143,12 @@ private fun RecordingContent(
     )
 
     Spacer(Modifier.height(16.dp))
-    Text("Recording…", style = MaterialTheme.typography.titleLarge,
+    Text(stringResource(R.string.recorder_recording), style = MaterialTheme.typography.titleLarge,
         color = MaterialTheme.colorScheme.error, fontWeight = FontWeight.Bold)
 
     state.nearestPoiName?.let { name ->
         Spacer(Modifier.height(4.dp))
-        Text("Near $name", style = MaterialTheme.typography.bodyMedium,
+        Text(stringResource(R.string.recorder_near_place, name), style = MaterialTheme.typography.bodyMedium,
             color = MaterialTheme.colorScheme.onSurfaceVariant)
     }
 
@@ -178,12 +180,12 @@ private fun RecordingContent(
         OutlinedButton(onClick = onCancel) {
             Icon(Icons.Default.Close, contentDescription = null)
             Spacer(Modifier.width(4.dp))
-            Text("Cancel")
+            Text(stringResource(R.string.action_cancel))
         }
         Button(onClick = onStop) {
             Icon(Icons.Default.Stop, contentDescription = null)
             Spacer(Modifier.width(4.dp))
-            Text("Stop")
+            Text(stringResource(R.string.action_stop))
         }
     }
     Spacer(Modifier.height(16.dp))
@@ -201,16 +203,16 @@ private fun SavedContent(state: RecordingState.Saved, onDone: () -> Unit) {
         modifier = Modifier.size(56.dp)
     )
     Spacer(Modifier.height(12.dp))
-    Text("Voice Note Saved", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
+    Text(stringResource(R.string.recorder_saved_title), style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
     Spacer(Modifier.height(4.dp))
     Text(
-        "Duration: ${state.durationSeconds.formatDuration()}",
+        stringResource(R.string.recorder_duration, state.durationSeconds.formatDuration()),
         style = MaterialTheme.typography.bodyMedium,
         color = MaterialTheme.colorScheme.onSurfaceVariant
     )
     state.associatedPoiName?.let { name ->
         Text(
-            "Linked to: $name",
+            stringResource(R.string.recorder_linked_to, name),
             style = MaterialTheme.typography.bodyMedium,
             color = MaterialTheme.colorScheme.primary
         )
@@ -223,12 +225,12 @@ private fun SavedContent(state: RecordingState.Saved, onDone: () -> Unit) {
                 horizontalArrangement = Arrangement.spacedBy(8.dp)
             ) {
                 CircularProgressIndicator(modifier = Modifier.size(16.dp), strokeWidth = 2.dp)
-                Text("Transcribing…", style = MaterialTheme.typography.bodySmall,
+                Text(stringResource(R.string.recorder_transcribing), style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant)
             }
         }
         state.transcription != null -> {
-            Text("Transcript", style = MaterialTheme.typography.labelMedium,
+            Text(stringResource(R.string.recorder_transcript_label), style = MaterialTheme.typography.labelMedium,
                 color = MaterialTheme.colorScheme.primary)
             Spacer(Modifier.height(4.dp))
             Text(
@@ -239,7 +241,7 @@ private fun SavedContent(state: RecordingState.Saved, onDone: () -> Unit) {
         }
     }
     Spacer(Modifier.height(24.dp))
-    Button(onClick = onDone, modifier = Modifier.fillMaxWidth()) { Text("Done") }
+    Button(onClick = onDone, modifier = Modifier.fillMaxWidth()) { Text(stringResource(R.string.action_done)) }
     Spacer(Modifier.height(16.dp))
 }
 
@@ -248,14 +250,14 @@ private fun SavedContent(state: RecordingState.Saved, onDone: () -> Unit) {
 @Composable
 private fun ErrorContent(message: String, onRetry: () -> Unit, onDismiss: () -> Unit) {
     Spacer(Modifier.height(16.dp))
-    Text("Oops!", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
+    Text(stringResource(R.string.recorder_error_title), style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
     Spacer(Modifier.height(8.dp))
     Text(message, style = MaterialTheme.typography.bodyMedium,
         color = MaterialTheme.colorScheme.onSurfaceVariant, textAlign = TextAlign.Center)
     Spacer(Modifier.height(24.dp))
     Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-        OutlinedButton(onClick = onDismiss) { Text("Cancel") }
-        Button(onClick = onRetry) { Text("Retry") }
+        OutlinedButton(onClick = onDismiss) { Text(stringResource(R.string.action_cancel)) }
+        Button(onClick = onRetry) { Text(stringResource(R.string.action_retry)) }
     }
     Spacer(Modifier.height(16.dp))
 }

@@ -1,0 +1,121 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">TravelLog</string>
+    <string name="notification_channel_tracking">Rastreo GPS</string>
+    <string name="notification_tracking_title">TravelLog está grabando tu recorrido</string>
+    <string name="notification_tracking_text">Rastreo GPS activo</string>
+
+    <!-- Navigation -->
+    <string name="nav_map">Mapa</string>
+    <string name="nav_places">Lugares</string>
+    <string name="nav_media">Multimedia</string>
+    <string name="nav_export">Exportar</string>
+    <string name="nav_settings">Ajustes</string>
+
+    <!-- Common actions -->
+    <string name="action_cancel">Cancelar</string>
+    <string name="action_retry">Reintentar</string>
+    <string name="action_dismiss">Cerrar</string>
+    <string name="action_save">Guardar</string>
+    <string name="action_done">Listo</string>
+    <string name="action_back">Atrás</string>
+    <string name="action_stop">Parar</string>
+
+    <!-- Day labels -->
+    <string name="day_today">Hoy</string>
+    <string name="day_yesterday">Ayer</string>
+
+    <!-- Export screen -->
+    <string name="export_title">Exportar</string>
+    <string name="export_select_day_placeholder">Selecciona un día</string>
+    <string name="export_travel_day_label">Día de viaje</string>
+    <string name="export_build_report">Generar informe</string>
+    <string name="export_building">Generando informe\u2026</string>
+    <string name="export_ready">Informe listo.</string>
+    <string name="export_print_pdf">Imprimir / Guardar PDF</string>
+    <string name="export_share_html">Compartir HTML</string>
+    <string name="export_share_gpx">Compartir archivos GPX</string>
+    <string name="export_no_gpx">No hay archivos GPX para este día.</string>
+    <string name="export_try_again">Reintentar</string>
+    <string name="export_share_html_subject">TravelLog \u2014 %1$s</string>
+
+    <!-- POI screen -->
+    <string name="poi_title">Lugares</string>
+    <string name="poi_refresh_desc">Actualizar</string>
+    <string name="poi_tab_nearby">Cercanos</string>
+    <string name="poi_tab_checked_in">Visitados (%1$d)</string>
+    <string name="poi_empty_nearby">No se han encontrado lugares cercanos.\nToca \u21bb para actualizar o muévete a otra zona.</string>
+    <string name="poi_empty_checked_in">Sin visitas registradas hoy.\n¡Encuentra un lugar y toca Registrar!</string>
+
+    <!-- POI card -->
+    <string name="poi_check_in">Registrar</string>
+    <string name="poi_checked_in_desc">Registrado</string>
+    <string name="poi_category_food">Comida y bebida</string>
+    <string name="poi_category_museum">Museo</string>
+    <string name="poi_category_attraction">Atracción</string>
+    <string name="poi_category_viewpoint">Mirador</string>
+    <string name="poi_category_accommodation">Alojamiento</string>
+    <string name="poi_category_historic">Sitio histórico</string>
+    <string name="poi_category_park">Parque / Jardín</string>
+    <string name="poi_category_entertainment">Entretenimiento</string>
+    <string name="poi_category_other">Lugar</string>
+
+    <!-- Media screen -->
+    <string name="media_title">Multimedia</string>
+    <string name="media_import_desc">Importar de galería</string>
+    <string name="media_tab_photos_videos">Fotos y vídeos (%1$d)</string>
+    <string name="media_tab_voice_notes">Notas de voz (%1$d)</string>
+    <string name="media_empty_photos">Sin fotos ni vídeos.\nToca el botón de importar para escanear la galería.</string>
+    <string name="media_empty_voice_notes">Sin notas de voz.\nGrábalas desde la pantalla del mapa.</string>
+
+    <!-- Settings screen -->
+    <string name="settings_title">Ajustes</string>
+    <string name="settings_section_gps">Rastreo GPS</string>
+    <string name="settings_gps_interval_label">Intervalo de actualización</string>
+    <string name="settings_gps_5s">5 segundos</string>
+    <string name="settings_gps_10s">10 segundos</string>
+    <string name="settings_gps_30s">30 segundos</string>
+    <string name="settings_adaptive_gps_label">GPS adaptativo</string>
+    <string name="settings_adaptive_gps_desc">Reduce la frecuencia al estar parado 2+ minutos</string>
+    <string name="settings_section_schedule">Horario</string>
+    <string name="settings_start_hour_label">Iniciar rastreo a las</string>
+    <string name="settings_tracking_stop_note">El rastreo siempre se detiene a medianoche.</string>
+    <string name="settings_section_transcription">Transcripción</string>
+    <string name="settings_openai_key_label">Clave API de OpenAI (opcional)</string>
+    <string name="settings_openai_key_desc">Alternativa Whisper si el reconocimiento local no produce texto</string>
+    <string name="settings_show_key_desc">Mostrar clave</string>
+    <string name="settings_hide_key_desc">Ocultar clave</string>
+
+    <!-- Map screen -->
+    <string name="map_record_voice_desc">Grabar nota de voz</string>
+    <string name="map_my_location_desc">Mi ubicación</string>
+    <string name="map_checkin_dialog_confirm">Registrar</string>
+
+    <!-- Voice recorder sheet -->
+    <string name="recorder_title">Nota de voz</string>
+    <string name="recorder_subtitle">Tu posición y los lugares cercanos\nse capturarán automáticamente.</string>
+    <string name="recorder_tap_to_start">Toca para comenzar</string>
+    <string name="recorder_recording">Grabando\u2026</string>
+    <string name="recorder_near_place">Cerca de %1$s</string>
+    <string name="recorder_saved_title">Nota de voz guardada</string>
+    <string name="recorder_duration">Duración: %1$s</string>
+    <string name="recorder_linked_to">Vinculada a: %1$s</string>
+    <string name="recorder_transcribing">Transcribiendo\u2026</string>
+    <string name="recorder_transcript_label">Transcripción</string>
+    <string name="recorder_error_title">¡Vaya!</string>
+
+    <!-- HTML Report -->
+    <string name="report_default_day_title">Día en %1$s</string>
+    <string name="report_stat_distance">Distancia</string>
+    <string name="report_stat_places">Lugares visitados</string>
+    <string name="report_stat_photos">Fotos</string>
+    <string name="report_stat_videos">Vídeos</string>
+    <string name="report_stat_voice_notes">Notas de voz</string>
+    <string name="report_section_notes">Notas</string>
+    <string name="report_section_timeline">Cronología</string>
+    <string name="report_type_checkin">Registro</string>
+    <string name="report_type_photo">Foto</string>
+    <string name="report_type_video">Vídeo</string>
+    <string name="report_type_voice_note">Nota de voz</string>
+    <string name="report_coord_label">%1$.5f, %2$.5f</string>
+</resources>

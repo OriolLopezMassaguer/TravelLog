@@ -8,8 +8,10 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import com.travellog.app.R
 import com.travellog.app.data.db.entity.PointOfInterest
 
 @Composable
@@ -48,7 +50,7 @@ fun PoiCard(
                     overflow = TextOverflow.Ellipsis
                 )
                 Text(
-                    text = poi.category.displayName(),
+                    text = poi.category.displayName(),   // displayName() is @Composable below
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
@@ -79,7 +81,7 @@ fun PoiCard(
                 if (poi.checkedIn) {
                     Icon(
                         Icons.Default.CheckCircle,
-                        contentDescription = "Checked in",
+                        contentDescription = stringResource(R.string.poi_checked_in_desc),
                         tint = MaterialTheme.colorScheme.primary
                     )
                 } else if (onCheckIn != null) {
@@ -87,7 +89,7 @@ fun PoiCard(
                         onClick = onCheckIn,
                         contentPadding = PaddingValues(horizontal = 10.dp, vertical = 4.dp)
                     ) {
-                        Text("Check in", style = MaterialTheme.typography.labelSmall)
+                        Text(stringResource(R.string.poi_check_in), style = MaterialTheme.typography.labelSmall)
                     }
                 }
             }
@@ -114,14 +116,15 @@ private fun String.toIcon(): ImageVector = when (this) {
     else            -> Icons.Default.Place
 }
 
+@Composable
 private fun String.displayName(): String = when (this) {
-    "food"          -> "Food & Drink"
-    "museum"        -> "Museum"
-    "attraction"    -> "Attraction"
-    "viewpoint"     -> "Viewpoint"
-    "accommodation" -> "Accommodation"
-    "historic"      -> "Historic site"
-    "park"          -> "Park / Garden"
-    "entertainment" -> "Entertainment"
-    else            -> "Place"
+    "food"          -> stringResource(R.string.poi_category_food)
+    "museum"        -> stringResource(R.string.poi_category_museum)
+    "attraction"    -> stringResource(R.string.poi_category_attraction)
+    "viewpoint"     -> stringResource(R.string.poi_category_viewpoint)
+    "accommodation" -> stringResource(R.string.poi_category_accommodation)
+    "historic"      -> stringResource(R.string.poi_category_historic)
+    "park"          -> stringResource(R.string.poi_category_park)
+    "entertainment" -> stringResource(R.string.poi_category_entertainment)
+    else            -> stringResource(R.string.poi_category_other)
 }

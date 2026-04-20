@@ -3,6 +3,7 @@ package com.travellog.app.ui.screens.voicenote
 import android.location.Location
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.travellog.app.audio.AndroidSpeechService
 import com.travellog.app.audio.VoiceRecordingManager
 import com.travellog.app.data.db.entity.PointOfInterest
 import com.travellog.app.data.repository.PoiRepository
@@ -49,6 +50,7 @@ sealed class RecordingState {
 @HiltViewModel
 class VoiceNoteViewModel @Inject constructor(
     private val recorder: VoiceRecordingManager,
+    private val speechService: AndroidSpeechService,
     private val voiceNoteRepository: VoiceNoteRepository,
     private val poiRepository: PoiRepository,
     private val travelDayRepository: TravelDayRepository,
@@ -72,6 +74,7 @@ class VoiceNoteViewModel @Inject constructor(
 
             try {
                 val file     = recorder.startRecording(day.date)
+                speechService.start()                    // start local transcription concurrently
                 val nearby   = nearbyDeferred.await()
                 val nearest  = location?.nearestPoi(nearby)
 
@@ -94,6 +97,9 @@ class VoiceNoteViewModel @Inject constructor(
     fun stopRecording() {
         val current = _state.value as? RecordingState.Recording ?: return
 
+        // Collect local transcription first (main-thread call), then stop MediaRecorder
+        val localTranscript = speechService.stop()
+
         viewModelScope.launch {
             val result = recorder.stopRecording()
             if (result == null) {
@@ -114,20 +120,33 @@ class VoiceNoteViewModel @Inject constructor(
                 recordedAt      = current.startedAtMs,
             )
 
-            _state.value = RecordingState.Saved(
-                voiceNoteId       = note.id,
-                durationSeconds   = result.durationSeconds,
-                associatedPoiName = current.nearestPoiName,
-                isTranscribing    = true,
-            )
-
-            val transcription = voiceNoteRepository.transcribeAndSave(note)
-            val saved = _state.value as? RecordingState.Saved ?: return@launch
-            _state.value = saved.copy(transcription = transcription, isTranscribing = false)
+            if (localTranscript.isNotBlank()) {
+                // Local transcription available — save immediately, no API call needed
+                voiceNoteRepository.saveTranscription(note.id, localTranscript)
+                _state.value = RecordingState.Saved(
+                    voiceNoteId       = note.id,
+                    durationSeconds   = result.durationSeconds,
+                    associatedPoiName = current.nearestPoiName,
+                    transcription     = localTranscript,
+                    isTranscribing    = false,
+                )
+            } else {
+                // Fall back to Whisper API if an API key is configured
+                _state.value = RecordingState.Saved(
+                    voiceNoteId       = note.id,
+                    durationSeconds   = result.durationSeconds,
+                    associatedPoiName = current.nearestPoiName,
+                    isTranscribing    = true,
+                )
+                val apiTranscript = voiceNoteRepository.transcribeWithWhisperAndSave(note)
+                val saved = _state.value as? RecordingState.Saved ?: return@launch
+                _state.value = saved.copy(transcription = apiTranscript, isTranscribing = false)
+            }
         }
     }
 
     fun cancelRecording() {
+        speechService.cancel()
         recorder.cancelRecording()
         _state.value = RecordingState.Idle
     }

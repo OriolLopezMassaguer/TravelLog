@@ -23,12 +23,14 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavController
 import coil.compose.AsyncImage
+import com.travellog.app.R
 import com.travellog.app.data.db.entity.MediaItem
 import com.travellog.app.data.db.entity.VoiceNote
 import java.time.Instant
@@ -72,14 +74,14 @@ fun MediaGalleryScreen(
     Scaffold(
         topBar = {
             Column {
-                TopAppBar(title = { Text("Media") })
+                TopAppBar(title = { Text(stringResource(R.string.media_title)) })
                 if (isImporting) LinearProgressIndicator(modifier = Modifier.fillMaxWidth())
             }
         },
         snackbarHost = { SnackbarHost(snackbarHostState) },
         floatingActionButton = {
             FloatingActionButton(onClick = { permissionLauncher.launch(mediaPermissions) }) {
-                Icon(Icons.Default.Download, contentDescription = "Import from gallery")
+                Icon(Icons.Default.Download, contentDescription = stringResource(R.string.media_import_desc))
             }
         }
     ) { padding ->
@@ -88,12 +90,12 @@ fun MediaGalleryScreen(
                 Tab(
                     selected = selectedTab == 0,
                     onClick  = { selectedTab = 0 },
-                    text     = { Text("Photos & Videos (${mediaItems.size})") }
+                    text     = { Text(stringResource(R.string.media_tab_photos_videos, mediaItems.size)) }
                 )
                 Tab(
                     selected = selectedTab == 1,
                     onClick  = { selectedTab = 1 },
-                    text     = { Text("Voice Notes (${voiceNotes.size})") }
+                    text     = { Text(stringResource(R.string.media_tab_voice_notes, voiceNotes.size)) }
                 )
             }
 
@@ -110,7 +112,7 @@ fun MediaGalleryScreen(
 @Composable
 private fun PhotoVideoGrid(items: List<MediaItem>) {
     if (items.isEmpty()) {
-        EmptyState("No photos or videos yet.\nTap the import button to scan your gallery.")
+        EmptyState(stringResource(R.string.media_empty_photos))
         return
     }
     LazyVerticalGrid(
@@ -170,7 +172,7 @@ private fun MediaCell(item: MediaItem) {
 @Composable
 private fun VoiceNoteList(notes: List<VoiceNote>) {
     if (notes.isEmpty()) {
-        EmptyState("No voice notes yet.\nRecord one from the Map screen.")
+        EmptyState(stringResource(R.string.media_empty_voice_notes))
         return
     }
     LazyColumn(

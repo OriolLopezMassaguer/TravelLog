@@ -14,7 +14,9 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
+import com.travellog.app.R
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.core.content.ContextCompat
 import androidx.hilt.navigation.compose.hiltViewModel
@@ -221,7 +223,7 @@ fun MapScreen(
                 .align(Alignment.BottomEnd)
                 .padding(16.dp)
         ) {
-            Icon(Icons.Default.Mic, contentDescription = "Record voice note")
+            Icon(Icons.Default.Mic, contentDescription = stringResource(R.string.map_record_voice_desc))
         }
 
         // Voice recorder bottom sheet
@@ -242,10 +244,10 @@ fun MapScreen(
                     Button(onClick = {
                         viewModel.checkIn(poi.id)
                         checkinDialogPoi.value = null
-                    }) { Text("Check In") }
+                    }) { Text(stringResource(R.string.map_checkin_dialog_confirm)) }
                 },
                 dismissButton = {
-                    TextButton(onClick = { checkinDialogPoi.value = null }) { Text("Cancel") }
+                    TextButton(onClick = { checkinDialogPoi.value = null }) { Text(stringResource(R.string.action_cancel)) }
                 }
             )
         }
@@ -265,7 +267,7 @@ fun MapScreen(
                 .align(Alignment.BottomEnd)
                 .padding(bottom = 88.dp, end = 16.dp)
         ) {
-            Icon(Icons.Default.MyLocation, contentDescription = "My location")
+            Icon(Icons.Default.MyLocation, contentDescription = stringResource(R.string.map_my_location_desc))
         }
     }
 }

@@ -76,7 +76,19 @@ class VoiceNoteRepository @Inject constructor(
         return note.copy(id = id)
     }
 
-    suspend fun transcribeAndSave(voiceNote: VoiceNote): String? {
+    /**
+     * Saves [text] as the transcription for [noteId].
+     * Used when transcription comes from a local source (AndroidSpeechService).
+     */
+    suspend fun saveTranscription(noteId: Long, text: String) {
+        voiceNoteDao.setTranscription(noteId, text)
+    }
+
+    /**
+     * Falls back to Whisper API transcription for [voiceNote].
+     * Only called when no local transcription was produced and an API key is configured.
+     */
+    suspend fun transcribeWithWhisperAndSave(voiceNote: VoiceNote): String? {
         val text = whisperService.transcribe(File(voiceNote.filePath)) ?: return null
         voiceNoteDao.setTranscription(voiceNote.id, text)
         return text

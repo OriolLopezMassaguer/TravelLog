@@ -4,6 +4,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.travellog.app.data.db.dao.MediaItemDao
 import com.travellog.app.data.db.dao.PoiDao
+import com.travellog.app.data.db.dao.TrackPointDao
 import com.travellog.app.data.db.dao.TravelDayDao
 import com.travellog.app.data.db.dao.VoiceNoteDao
 import com.travellog.app.data.db.entity.TravelDay
@@ -24,6 +25,7 @@ class ExportViewModel @Inject constructor(
     private val mediaItemDao: MediaItemDao,
     private val voiceNoteDao: VoiceNoteDao,
     private val poiDao: PoiDao,
+    private val trackPointDao: TrackPointDao,
     private val htmlBuilder: HtmlReportBuilder,
 ) : ViewModel() {
 
@@ -69,11 +71,12 @@ class ExportViewModel @Inject constructor(
     fun resetState() { _exportState.value = ExportState.Idle }
 
     private suspend fun gatherReport(dayId: Long): DayReport {
-        val day        = travelDayDao.getDayById(dayId)
+        val day         = travelDayDao.getDayById(dayId)
             ?: error("Day $dayId not found")
-        val pois       = poiDao.getPoisForDayOnce(dayId).filter { it.checkedIn }
-        val media      = mediaItemDao.getPhotoVideoForDayOnce(dayId)
-        val voiceNotes = voiceNoteDao.getVoiceNotesForDayOnce(dayId)
-        return DayReport(day, pois, media, voiceNotes)
+        val pois        = poiDao.getPoisForDayOnce(dayId).filter { it.checkedIn }
+        val media       = mediaItemDao.getPhotoVideoForDayOnce(dayId)
+        val voiceNotes  = voiceNoteDao.getVoiceNotesForDayOnce(dayId)
+        val trackPoints = trackPointDao.getPointsForDayOnce(dayId)
+        return DayReport(day, pois, media, voiceNotes, trackPoints)
     }
 }
