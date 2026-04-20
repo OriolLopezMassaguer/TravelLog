@@ -42,6 +42,14 @@ android {
         }
     }
 
+    applicationVariants.all {
+        val variant = this
+        variant.outputs.all {
+            (this as com.android.build.gradle.internal.api.BaseVariantOutputImpl).outputFileName =
+                "TravelLog-${variant.versionName}.apk"
+        }
+    }
+
     buildTypes {
         debug {
             applicationIdSuffix = ".debug"
