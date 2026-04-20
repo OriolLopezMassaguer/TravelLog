@@ -30,6 +30,21 @@ abstract class TravelLogDatabase : RoomDatabase() {
     companion object {
         val MIGRATION_1_2 = object : Migration(1, 2) {
             override fun migrate(database: SupportSQLiteDatabase) {
+                // Remove duplicate (external_id, day_id) rows that would block unique index
+                // creation. Keep the checked-in row; fall back to highest id.
+                database.execSQL("""
+                    DELETE FROM points_of_interest
+                    WHERE external_id IS NOT NULL
+                      AND id NOT IN (
+                        SELECT COALESCE(
+                            MAX(CASE WHEN checked_in = 1 THEN id ELSE NULL END),
+                            MAX(id)
+                        )
+                        FROM points_of_interest
+                        WHERE external_id IS NOT NULL
+                        GROUP BY external_id, day_id
+                      )
+                """.trimIndent())
                 database.execSQL("DROP INDEX IF EXISTS index_points_of_interest_external_id")
                 database.execSQL(
                     "CREATE UNIQUE INDEX IF NOT EXISTS index_points_of_interest_external_id_day_id " +
