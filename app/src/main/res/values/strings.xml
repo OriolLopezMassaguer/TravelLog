@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">TravelLog</string>
+    <string name="notification_channel_tracking">GPS Tracking</string>
+    <string name="notification_tracking_title">TravelLog is recording your journey</string>
+    <string name="notification_tracking_text">GPS tracking active</string>
+</resources>

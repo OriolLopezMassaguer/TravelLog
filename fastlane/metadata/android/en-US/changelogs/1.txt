@@ -1,0 +1,10 @@
+Initial release.
+
+- Automatic GPS tracking (8 AM – midnight) with GPX export
+- Photo and video import with 3-step location association
+- Voice notes with GPS metadata and POI linking
+- Points of interest via OpenStreetMap (Overpass API)
+- Map view with track, POIs, and voice note pins
+- PDF daily blog export
+- Share GPX files
+- Adaptive GPS: reduces battery use when you're stationary

@@ -1,0 +1,25 @@
+TravelLog automatically records your day as you explore.
+
+AUTOMATIC GPS TRACKING
+Records your route from 8 AM to midnight every day. Your track is saved as a GPX file so you can import it into any mapping app.
+
+SMART MEDIA ASSOCIATION
+Import photos and videos from your gallery. TravelLog links each one to a place using GPS EXIF data, track interpolation, or your last check-in — whichever is most accurate.
+
+VOICE NOTES WITH LOCATION
+Record voice notes on the go. Each note is pinned to your GPS position and associated with the nearest point of interest.
+
+POINTS OF INTEREST
+Nearby places are fetched automatically as you move. Check in to a café, museum, or park to anchor your photos and notes to that location.
+
+OFFLINE MAP
+View your full route, visited places, and voice note pins on a smooth vector map — no internet required for the map itself.
+
+PDF EXPORT
+Export any day as a travel blog: route summary, places visited, photos, and voice note transcriptions — ready to share or print.
+
+GPX SHARING
+Share your track and POI files directly to any app that reads GPX.
+
+NO ADS. NO CLOUD. NO API KEYS.
+Everything stays on your device. The map uses OpenStreetMap data via OpenFreeMap — completely free and private.

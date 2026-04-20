@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<paths>
+    <!-- GPX files stored in getExternalFilesDir(null)/TravelLog/... -->
+    <external-files-path name="external_files" path="." />
+    <!-- Voice note recordings stored in filesDir/voice_notes/... -->
+    <files-path name="internal_files" path="." />
+    <!-- HTML export files written to cacheDir/reports/ -->
+    <cache-path name="cache" path="." />
+</paths>
