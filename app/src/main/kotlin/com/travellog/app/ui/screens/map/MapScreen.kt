@@ -273,7 +273,7 @@ private fun initPoiLayer(style: Style) {
             PropertyFactory.textHaloColor("#FFFFFF"),
             PropertyFactory.textHaloWidth(1.5f),
             PropertyFactory.textOffset(arrayOf(0f, -1.8f)),
-            PropertyFactory.textAnchor("bottom")
+            PropertyFactory.textAnchor(Property.TEXT_ANCHOR_BOTTOM)
         )
     )
 }

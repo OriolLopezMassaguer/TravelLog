@@ -198,6 +198,7 @@ class GpsTrackingService : Service() {
 
         if (shouldFlush) flushBuffer()
 
+        @Suppress("MissingPermission")
         val nm = getSystemService(NOTIFICATION_SERVICE) as android.app.NotificationManager
         nm.notify(
             NotificationHelper.NOTIFICATION_ID,

@@ -10,6 +10,8 @@
     <!-- Foreground service for GPS tracking -->
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_LOCATION" />
+    <!-- Required on Android 13+ to post/update notifications -->
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
 
     <!-- Audio recording -->
     <uses-permission android:name="android.permission.RECORD_AUDIO" />

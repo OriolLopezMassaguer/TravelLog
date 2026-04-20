@@ -17,6 +17,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavController
 import com.travellog.app.ui.components.PoiCard
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun PoiListScreen(
     navController: NavController,
