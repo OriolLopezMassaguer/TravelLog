@@ -49,11 +49,8 @@ class MapViewModel @Inject constructor(
         .flatMapLatest { dayId -> poiRepository.getCheckedInPoisForDay(dayId) }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
 
-    val availablePois: StateFlow<List<PointOfInterest>> = _selectedDayId
-        .filterNotNull()
-        .flatMapLatest { dayId -> poiRepository.getPoisForDay(dayId) }
-        .map { pois -> pois.filter { !it.checkedIn } }
-        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
+    private val _availablePois = MutableStateFlow<List<PointOfInterest>>(emptyList())
+    val availablePois: StateFlow<List<PointOfInterest>> = _availablePois.asStateFlow()
 
     val voiceNotes: StateFlow<List<VoiceNote>> = _selectedDayId
         .filterNotNull()
@@ -83,15 +80,18 @@ class MapViewModel @Inject constructor(
         viewModelScope.launch {
             val dayId    = _selectedDayId.value ?: return@launch
             val location = locationProvider.getLastLocation() ?: return@launch
-            runCatching { poiRepository.fetchNearbyPois(location.latitude, location.longitude, dayId) }
+            runCatching {
+                _availablePois.value = poiRepository.fetchNearbyPois(location.latitude, location.longitude, dayId)
+            }
         }
     }
 
-    fun checkIn(poiId: Long) {
+    fun checkIn(poi: PointOfInterest) {
         viewModelScope.launch {
             val dayId    = _selectedDayId.value ?: return@launch
             val location = locationProvider.getLastLocation()
-            poiRepository.checkIn(poiId, dayId, location)
+            poiRepository.checkIn(poi, dayId, location)
+            _availablePois.update { current -> current.filter { it.externalId != poi.externalId } }
         }
     }
 }

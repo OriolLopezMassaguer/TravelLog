@@ -168,9 +168,10 @@ fun MapScreen(
                 val rect = android.graphics.RectF(pt.x - slop, pt.y - slop, pt.x + slop, pt.y + slop)
                 val features = map.queryRenderedFeatures(rect, AVAILABLE_POI_LAYER)
                 if (features.isNotEmpty()) {
-                    val id = features[0].getNumberProperty("id")?.toLong()
+                    val extId = features[0].getStringProperty("externalId")
+                        ?.takeIf { it.isNotEmpty() }
                         ?: return@addOnMapClickListener false
-                    checkinDialogPoi.value = viewModel.availablePois.value.find { it.id == id }
+                    checkinDialogPoi.value = viewModel.availablePois.value.find { it.externalId == extId }
                     checkinDialogPoi.value != null
                 } else false
             }
@@ -294,7 +295,7 @@ fun MapScreen(
                 text  = { Text(poi.category + if (poi.address != null) "\n${poi.address}" else "") },
                 confirmButton = {
                     Button(onClick = {
-                        viewModel.checkIn(poi.id)
+                        viewModel.checkIn(poi)
                         checkinDialogPoi.value = null
                     }) { Text(stringResource(R.string.map_checkin_dialog_confirm)) }
                 },
@@ -405,11 +406,12 @@ private fun initAvailablePoiLayer(style: Style) {
 
 private fun updateAvailablePoiMarkers(style: Style, pois: List<PointOfInterest>) {
     val source = style.getSource(AVAILABLE_POI_SOURCE) as? GeoJsonSource ?: return
-    val features = pois.map { poi ->
+    val features = pois.mapNotNull { poi ->
+        val extId = poi.externalId ?: return@mapNotNull null
         Feature.fromGeometry(Point.fromLngLat(poi.longitude, poi.latitude)).apply {
             addStringProperty("name", poi.name)
             addStringProperty("category", poi.category)
-            addNumberProperty("id", poi.id)
+            addStringProperty("externalId", extId)
         }
     }
     source.setGeoJson(FeatureCollection.fromFeatures(features))

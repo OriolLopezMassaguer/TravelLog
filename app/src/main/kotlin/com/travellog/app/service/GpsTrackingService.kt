@@ -59,7 +59,7 @@ class GpsTrackingService : Service() {
     // Auto POI check-in state
     private var poiCache: List<PointOfInterest> = emptyList()
     private var lastPoiCacheMs = 0L
-    private val autoCheckedInPoiIds = mutableSetOf<Long>()
+    private val autoCheckedInExternalIds = mutableSetOf<String>()
 
     companion object {
         const val ACTION_START = "com.travellog.app.ACTION_START_TRACKING"
@@ -263,14 +263,15 @@ class GpsTrackingService : Service() {
 
         val dist = FloatArray(1)
         for (poi in poiCache) {
-            if (poi.checkedIn || poi.id in autoCheckedInPoiIds) continue
+            val key = poi.externalId ?: continue
+            if (key in autoCheckedInExternalIds) continue
             android.location.Location.distanceBetween(
                 location.latitude, location.longitude,
                 poi.latitude, poi.longitude, dist
             )
             if (dist[0] <= POI_AUTO_RADIUS_M) {
-                autoCheckedInPoiIds += poi.id
-                poiRepository.checkIn(poi.id, currentDayId, location)
+                autoCheckedInExternalIds += key
+                poiRepository.checkIn(poi, currentDayId, location)
             }
         }
     }
