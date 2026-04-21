@@ -99,7 +99,7 @@ fun PoiListScreen(
 private fun NearbyTab(
     pois: List<PoiWithDistance>,
     isLoading: Boolean,
-    onCheckIn: (Long) -> Unit
+    onCheckIn: (com.travellog.app.data.db.entity.PointOfInterest) -> Unit
 ) {
     if (!isLoading && pois.isEmpty()) {
         EmptyState(stringResource(R.string.poi_empty_nearby))
@@ -114,7 +114,7 @@ private fun NearbyTab(
             PoiCard(
                 poi           = item.poi,
                 distanceMeters = item.distanceMeters.takeIf { it < Float.MAX_VALUE },
-                onCheckIn     = { onCheckIn(item.poi.id) }
+                onCheckIn     = { onCheckIn(item.poi) }
             )
         }
     }

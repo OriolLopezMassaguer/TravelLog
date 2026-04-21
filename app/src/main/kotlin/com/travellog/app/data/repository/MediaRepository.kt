@@ -10,7 +10,6 @@ import com.travellog.app.media.ExifReader
 import com.travellog.app.media.MediaScanner
 import kotlinx.coroutines.flow.Flow
 import java.time.LocalDate
-import java.time.LocalTime
 import java.time.ZoneId
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -40,8 +39,8 @@ class MediaRepository @Inject constructor(
      * Returns the number of newly imported items.
      */
     suspend fun importMediaForDay(day: TravelDay): Int {
-        val startMs = day.startedAt ?: defaultStart(day.date)
-        val endMs   = System.currentTimeMillis()   // always scan up to now; duplicates skipped by file-path check
+        val startMs = startOfDay(day.date)
+        val endMs   = endOfDay(day.date)
 
         val deviceItems = mediaScanner.scanRange(startMs, endMs)
         var imported    = 0
@@ -120,10 +119,16 @@ class MediaRepository @Inject constructor(
 
     // ── Date helpers ──────────────────────────────────────────────────────────
 
-    private fun defaultStart(date: String): Long =
+    private fun startOfDay(date: String): Long =
         LocalDate.parse(date)
-            .atTime(LocalTime.of(8, 0))
-            .atZone(ZoneId.systemDefault())
+            .atStartOfDay(ZoneId.systemDefault())
+            .toInstant()
+            .toEpochMilli()
+
+    private fun endOfDay(date: String): Long =
+        LocalDate.parse(date)
+            .plusDays(1)
+            .atStartOfDay(ZoneId.systemDefault())
             .toInstant()
             .toEpochMilli()
 }

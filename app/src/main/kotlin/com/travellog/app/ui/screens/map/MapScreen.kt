@@ -294,7 +294,7 @@ fun MapScreen(
                 text  = { Text(poi.category + if (poi.address != null) "\n${poi.address}" else "") },
                 confirmButton = {
                     Button(onClick = {
-                        viewModel.checkIn(poi.id)
+                        viewModel.checkIn(poi)
                         checkinDialogPoi.value = null
                     }) { Text(stringResource(R.string.map_checkin_dialog_confirm)) }
                 },

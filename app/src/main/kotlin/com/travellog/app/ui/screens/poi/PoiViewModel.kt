@@ -21,21 +21,21 @@ class PoiViewModel @Inject constructor(
     private val locationProvider: LocationProvider,
 ) : ViewModel() {
 
-    private val _currentDayId   = MutableStateFlow<Long?>(null)
+    private val _currentDayId    = MutableStateFlow<Long?>(null)
     private val _currentLocation = MutableStateFlow<Location?>(null)
-    private val _isLoading      = MutableStateFlow(false)
-    private val _error          = MutableStateFlow<String?>(null)
+    private val _isLoading       = MutableStateFlow(false)
+    private val _error           = MutableStateFlow<String?>(null)
+    private val _nearbyPois      = MutableStateFlow<List<PointOfInterest>>(emptyList())
 
     val isLoading: StateFlow<Boolean> = _isLoading.asStateFlow()
     val error: StateFlow<String?>     = _error.asStateFlow()
 
-    /** Nearby POIs sorted by distance from current location. */
+    /** Nearby POIs (fetched from Overpass, held in memory) sorted by distance. */
     val nearbyPois: StateFlow<List<PoiWithDistance>> = combine(
-        _currentDayId.filterNotNull().flatMapLatest { poiRepository.getPoisForDay(it) },
+        _nearbyPois,
         _currentLocation
     ) { pois, location ->
-        pois.filter { !it.checkedIn }
-            .map { poi -> PoiWithDistance(poi, location?.distanceTo(poi) ?: Float.MAX_VALUE) }
+        pois.map { poi -> PoiWithDistance(poi, location?.distanceTo(poi) ?: Float.MAX_VALUE) }
             .sortedBy { it.distanceMeters }
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
 
@@ -67,7 +67,7 @@ class PoiViewModel @Inject constructor(
             _isLoading.value = true
             _error.value = null
             try {
-                poiRepository.fetchNearbyPois(location.latitude, location.longitude, dayId)
+                _nearbyPois.value = poiRepository.fetchNearbyPois(location.latitude, location.longitude, dayId)
             } catch (e: Exception) {
                 _error.value = "Could not fetch nearby places"
             } finally {
@@ -76,10 +76,11 @@ class PoiViewModel @Inject constructor(
         }
     }
 
-    fun checkIn(poiId: Long) {
+    fun checkIn(poi: PointOfInterest) {
         viewModelScope.launch {
             val dayId = _currentDayId.value ?: return@launch
-            poiRepository.checkIn(poiId, dayId, _currentLocation.value)
+            poiRepository.checkIn(poi, dayId, _currentLocation.value)
+            _nearbyPois.update { current -> current.filter { it.externalId != poi.externalId } }
         }
     }
 

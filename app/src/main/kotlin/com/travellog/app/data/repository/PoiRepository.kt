@@ -35,48 +35,25 @@ class PoiRepository @Inject constructor(
     // ── Fetch nearby (with 5-min cache) ──────────────────────────────────────
 
     /**
-     * Returns POIs near [lat]/[lon] for [dayId].
-     * Uses cached DB results if a fetch was done within 5 minutes within ~200 m;
-     * otherwise queries Overpass and stores results.
+     * Returns POIs near [lat]/[lon] from Overpass without persisting them.
+     * POIs are only stored to the database when the user explicitly checks in.
      */
     suspend fun fetchNearbyPois(
         lat: Double,
         lon: Double,
         dayId: Long
     ): List<PointOfInterest> {
-        val cacheAfterMs   = System.currentTimeMillis() - CACHE_TTL_MS
-        // ≈200 m in degrees (rough bounding box, not exact great-circle)
-        val degRadiusSq    = 0.0018 * 0.0018
-
-        val cached = poiDao.getNearbyPoisCached(dayId, lat, lon, degRadiusSq, cacheAfterMs)
-        if (cached.isNotEmpty()) return cached
-
         val elements = overpassService.queryNearby(lat, lon)
-        if (elements.isEmpty()) {
-            // Network failed — return whatever we have cached regardless of age
-            return poiDao.getPoisForDayOnce(dayId)
-        }
-
-        val pois = elements.mapNotNull { it.toEntity(dayId) }
-        poiDao.insertAll(pois)   // IGNORE on conflict — won't overwrite check-ins
-
-        // Write / refresh pois.gpx
-        val day = travelDayRepository.getByDate(LocalDate.now().toString())
-        if (day != null) {
-            val checkedIn = poiDao.getPoisForDayOnce(dayId).filter { it.checkedIn }
-            val file      = gpxPoiWriter.writeAll(day.date, checkedIn)
-            if (day.gpxPoiPath == null) {
-                travelDayRepository.setGpxPoiPath(dayId, file.absolutePath)
-            }
-        }
-
-        return poiDao.getPoisForDayOnce(dayId)
+        return elements.mapNotNull { it.toEntity(dayId) }
     }
 
     // ── Check-in ─────────────────────────────────────────────────────────────
 
-    suspend fun checkIn(poiId: Long, dayId: Long, location: Location?) {
+    suspend fun checkIn(poi: PointOfInterest, dayId: Long, location: Location?) {
         val now = System.currentTimeMillis()
+        val insertedId = poiDao.insert(poi.copy(fetchedAt = now, dayId = dayId))
+        val poiId = if (insertedId != -1L) insertedId
+                    else poiDao.getByExternalId(poi.externalId ?: return, dayId)?.id ?: return
         poiDao.checkIn(poiId, now)
         checkInDao.insert(
             CheckIn(
@@ -119,7 +96,4 @@ class PoiRepository @Inject constructor(
         )
     }
 
-    companion object {
-        private const val CACHE_TTL_MS = 5 * 60 * 1_000L
-    }
 }
