@@ -6,14 +6,23 @@ data class OverpassResponse(
     val elements: List<OverpassElement> = emptyList()
 )
 
+data class OverpassCenter(
+    val lat: Double = 0.0,
+    val lon: Double = 0.0
+)
+
 data class OverpassElement(
     val type: String = "",
     val id: Long = 0,
-    val lat: Double = 0.0,
-    val lon: Double = 0.0,
+    val lat: Double? = null,
+    val lon: Double? = null,
+    val center: OverpassCenter? = null,
     val tags: Map<String, String> = emptyMap()
 ) {
     val name: String? get() = tags["name"]
+
+    val latValue: Double get() = lat ?: center?.lat ?: 0.0
+    val lonValue: Double get() = lon ?: center?.lon ?: 0.0
 
     val category: String get() = when {
         tags["amenity"] in FOOD_AMENITIES          -> "food"

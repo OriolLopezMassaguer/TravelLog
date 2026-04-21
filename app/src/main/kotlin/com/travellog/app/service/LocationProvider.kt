@@ -23,7 +23,20 @@ class LocationProvider @Inject constructor(
     @SuppressLint("MissingPermission")
     suspend fun getLastLocation(): Location? = suspendCancellableCoroutine { cont ->
         fusedClient.lastLocation
-            .addOnSuccessListener { location -> cont.resume(location) }
+            .addOnSuccessListener { location ->
+                if (location != null) {
+                    cont.resume(location)
+                } else {
+                    // Fallback to fresh location if lastLocation is null
+                    val request = com.google.android.gms.location.CurrentLocationRequest.Builder()
+                        .setPriority(com.google.android.gms.location.Priority.PRIORITY_HIGH_ACCURACY)
+                        .setDurationMillis(5000)
+                        .build()
+                    fusedClient.getCurrentLocation(request, null)
+                        .addOnSuccessListener { fresh -> cont.resume(fresh) }
+                        .addOnFailureListener { cont.resume(null) }
+                }
+            }
             .addOnFailureListener { cont.resume(null) }
             .addOnCanceledListener { cont.resume(null) }
     }

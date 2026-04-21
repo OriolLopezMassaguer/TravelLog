@@ -2,8 +2,14 @@ package com.travellog.app.ui.screens.export
 
 import android.content.Context
 import android.content.Intent
+import android.app.Activity
+import android.content.ContextWrapper
 import android.print.PrintAttributes
 import android.print.PrintManager
+import android.util.Log
+import android.widget.Toast
+import android.view.ViewGroup
+import android.view.View
 import android.webkit.WebView
 import android.webkit.WebViewClient
 import androidx.compose.foundation.layout.*
@@ -125,6 +131,33 @@ fun ExportScreen(
                         Spacer(Modifier.width(8.dp))
                         Text(stringResource(R.string.export_share_html))
                     }
+
+                    // Dual GPX Share (Track and POIs)
+                    OutlinedButton(
+                        onClick  = {
+                            shareGpxFiles(
+                                context,
+                                state.day.date,
+                                state.trackGpx,
+                                state.poisGpx
+                            )
+                        },
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Icon(Icons.Default.Share, contentDescription = null)
+                        Spacer(Modifier.width(8.dp))
+                        Text(stringResource(R.string.export_share_gpx))
+                    }
+
+                    // Unified GPX share
+                    OutlinedButton(
+                        onClick  = { shareUnifiedGpx(context, state.unifiedGpx, state.day.date) },
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Icon(Icons.Default.Share, contentDescription = null)
+                        Spacer(Modifier.width(8.dp))
+                        Text(stringResource(R.string.export_share_unified_gpx))
+                    }
                 }
                 is ExportViewModel.ExportState.Error -> {
                     Text(
@@ -140,62 +173,103 @@ fun ExportScreen(
             }
 
             HorizontalDivider()
-
-            // GPX sharing
-            selectedDay?.let { day ->
-                OutlinedButton(
-                    onClick  = { shareGpxFiles(context, day) },
-                    enabled  = day.gpxTrackPath != null || day.gpxPoiPath != null,
-                    modifier = Modifier.fillMaxWidth()
-                ) {
-                    Icon(Icons.Default.Share, contentDescription = null)
-                    Spacer(Modifier.width(8.dp))
-                    Text(stringResource(R.string.export_share_gpx))
-                }
-                if (day.gpxTrackPath == null && day.gpxPoiPath == null) {
-                    Text(
-                        stringResource(R.string.export_no_gpx),
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                }
-            }
         }
     }
 }
 
 // ── Print helper ──────────────────────────────────────────────────────────────
 
+// Keep a static reference to prevent GC during the print process
+private var activeWebView: WebView? = null
+
 private fun triggerPrint(context: Context, html: String, jobName: String) {
-    val webView = WebView(context)
-    webView.settings.allowFileAccess = true
+    val activity = context.findActivity() ?: return
+    val printManager = activity.getSystemService(Context.PRINT_SERVICE) as? PrintManager ?: run {
+        Toast.makeText(context, "Print service not available", Toast.LENGTH_SHORT).show()
+        return
+    }
+
+    Log.d("ExportScreen", "Triggering print for $jobName. HTML size: ${html.length}")
+    Toast.makeText(context, R.string.export_building, Toast.LENGTH_SHORT).show()
+
+    // Create WebView on the UI thread
+    val webView = WebView(activity)
+    activeWebView = webView
+    
+    // On some devices, WebView must be attached to a Window to print correctly
+    val rootView = activity.findViewById<ViewGroup>(android.R.id.content)
+    webView.layoutParams = ViewGroup.LayoutParams(1, 1)
+    webView.visibility = View.INVISIBLE
+    rootView.addView(webView)
+
+    webView.settings.javaScriptEnabled = true
+    
     webView.webViewClient = object : WebViewClient() {
         override fun onPageFinished(view: WebView, url: String) {
-            val printManager = context.getSystemService(Context.PRINT_SERVICE) as PrintManager
-            val adapter      = view.createPrintDocumentAdapter(jobName)
-            printManager.print(
-                jobName, adapter,
-                PrintAttributes.Builder()
-                    .setMediaSize(PrintAttributes.MediaSize.ISO_A4)
-                    .build()
-            )
+            Log.d("ExportScreen", "WebView page finished. Starting print job: $jobName")
+            
+            try {
+                // Use the version that doesn't take a name if on older APIs, 
+                // but for SDK 35 createPrintDocumentAdapter(String) is the way.
+                val adapter = view.createPrintDocumentAdapter(jobName)
+                
+                printManager.print(
+                    jobName,
+                    adapter,
+                    PrintAttributes.Builder()
+                        .setMediaSize(PrintAttributes.MediaSize.ISO_A4)
+                        .setColorMode(PrintAttributes.COLOR_MODE_COLOR)
+                        .build()
+                )
+            } catch (e: Exception) {
+                Log.e("ExportScreen", "Error during print() call", e)
+                Toast.makeText(activity, "Print error: ${e.message}", Toast.LENGTH_LONG).show()
+            } finally {
+                // Cleanup after some time. We can't remove it immediately 
+                // because the PrintManager might still be talking to it.
+                view.postDelayed({
+                    rootView.removeView(view)
+                    if (activeWebView == view) activeWebView = null
+                }, 10000)
+            }
+        }
+
+        override fun onReceivedError(view: WebView?, errorCode: Int, description: String?, failingUrl: String?) {
+            Log.e("ExportScreen", "WebView error ($errorCode): $description")
+            Toast.makeText(activity, "WebView error: $description", Toast.LENGTH_LONG).show()
+            rootView.removeView(view)
+            activeWebView = null
         }
     }
-    webView.loadDataWithBaseURL("file:///", html, "text/html", "UTF-8", null)
+
+    // Use a simpler base URL
+    webView.loadDataWithBaseURL("https://app.travellog", html, "text/html", "UTF-8", null)
+}
+
+private fun Context.findActivity(): Activity? {
+    var currentContext = this
+    while (currentContext is ContextWrapper) {
+        if (currentContext is Activity) return currentContext
+        currentContext = currentContext.baseContext
+    }
+    return null
 }
 
 // ── GPX share helper ──────────────────────────────────────────────────────────
 
-private fun shareGpxFiles(context: Context, day: TravelDay) {
-    val uris = listOfNotNull(day.gpxTrackPath, day.gpxPoiPath)
-        .map { path ->
-            FileProvider.getUriForFile(
-                context,
-                "${context.packageName}.fileprovider",
-                File(path)
-            )
-        }
-    if (uris.isEmpty()) return
+private fun shareGpxFiles(context: Context, date: String, trackGpx: String, poisGpx: String) {
+    val exportDir = File(context.cacheDir, "export").also { it.mkdirs() }
+    
+    val trackFile = File(exportDir, "track-$date.gpx").apply { writeText(trackGpx) }
+    val poisFile  = File(exportDir, "pois-$date.gpx").apply { writeText(poisGpx) }
+
+    val uris = listOf(trackFile, poisFile).map { file ->
+        FileProvider.getUriForFile(
+            context,
+            "${context.packageName}.fileprovider",
+            file
+        )
+    }
 
     val intent = Intent(Intent.ACTION_SEND_MULTIPLE).apply {
         type = "application/gpx+xml"
@@ -224,6 +298,25 @@ private fun shareHtml(context: Context, html: String, date: String) {
         addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
     }
     context.startActivity(Intent.createChooser(intent, context.getString(R.string.export_share_html)))
+}
+
+private fun shareUnifiedGpx(context: Context, gpxData: String, date: String) {
+    val exportDir = File(context.cacheDir, "export").also { it.mkdirs() }
+    val gpxFile   = File(exportDir, "trip-$date.gpx")
+    gpxFile.writeText(gpxData)
+
+    val uri = FileProvider.getUriForFile(
+        context,
+        "${context.packageName}.fileprovider",
+        gpxFile
+    )
+    val intent = Intent(Intent.ACTION_SEND).apply {
+        type = "application/gpx+xml"
+        putExtra(Intent.EXTRA_STREAM, uri)
+        putExtra(Intent.EXTRA_SUBJECT, context.getString(R.string.export_share_unified_gpx_subject, date))
+        addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+    }
+    context.startActivity(Intent.createChooser(intent, context.getString(R.string.export_share_unified_gpx_chooser)))
 }
 
 // ── Formatting ────────────────────────────────────────────────────────────────

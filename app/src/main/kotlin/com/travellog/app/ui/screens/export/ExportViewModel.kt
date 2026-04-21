@@ -27,12 +27,19 @@ class ExportViewModel @Inject constructor(
     private val poiDao: PoiDao,
     private val trackPointDao: TrackPointDao,
     private val htmlBuilder: HtmlReportBuilder,
+    private val gpxBuilder: com.travellog.app.data.gpx.GpxExportBuilder,
 ) : ViewModel() {
 
     sealed class ExportState {
         data object Idle     : ExportState()
         data object Building : ExportState()
-        data class  Ready(val html: String, val day: TravelDay) : ExportState()
+        data class  Ready(
+            val html: String,
+            val unifiedGpx: String,
+            val trackGpx: String,
+            val poisGpx: String,
+            val day: TravelDay
+        ) : ExportState()
         data class  Error(val message: String) : ExportState()
     }
 
@@ -60,8 +67,12 @@ class ExportViewModel @Inject constructor(
             _exportState.value = ExportState.Building
             try {
                 val report = withContext(Dispatchers.IO) { gatherReport(dayId) }
-                val html   = htmlBuilder.build(report)
-                _exportState.value = ExportState.Ready(html, report.day)
+                val unifiedGpx = gpxBuilder.build(report)
+                val trackGpx   = gpxBuilder.buildTrackOnly(report)
+                val poisGpx    = gpxBuilder.buildPoisOnly(report)
+                val html       = htmlBuilder.build(report, unifiedGpx, trackGpx, poisGpx)
+
+                _exportState.value = ExportState.Ready(html, unifiedGpx, trackGpx, poisGpx, report.day)
             } catch (e: Exception) {
                 _exportState.value = ExportState.Error(e.message ?: "Export failed")
             }

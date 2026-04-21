@@ -94,6 +94,22 @@ class VoiceNoteRepository @Inject constructor(
         return text
     }
 
+    suspend fun deleteVoiceNote(voiceNoteId: Long) {
+        val voiceNote = voiceNoteDao.getById(voiceNoteId) ?: return
+        
+        // Delete the physical file
+        val file = File(voiceNote.filePath)
+        if (file.exists()) {
+            file.delete()
+        }
+
+        // Delete from database (VoiceNote and MediaItem)
+        voiceNoteDao.delete(voiceNote)
+        mediaItemDao.getById(voiceNote.mediaItemId)?.let {
+            mediaItemDao.delete(it)
+        }
+    }
+
     // ── Association ───────────────────────────────────────────────────────────
 
     private suspend fun findAssociatedPoi(dayId: Long, lat: Double, lon: Double): Long? {

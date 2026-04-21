@@ -35,6 +35,9 @@
     <string name="export_print_pdf">Imprimir / Desar PDF</string>
     <string name="export_share_html">Compartir HTML</string>
     <string name="export_share_gpx">Compartir fitxers GPX</string>
+    <string name="export_share_unified_gpx">Compartir GPX unificat</string>
+    <string name="export_share_unified_gpx_subject">GPX unificat - %1$s</string>
+    <string name="export_share_unified_gpx_chooser">Compartir GPX unificat</string>
     <string name="export_no_gpx">No hi ha fitxers GPX per a aquest dia.</string>
     <string name="export_try_again">Tornar a intentar</string>
     <string name="export_share_html_subject">TravelLog \u2014 %1$s</string>

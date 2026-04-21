@@ -70,5 +70,11 @@ class MediaGalleryViewModel @Inject constructor(
         }
     }
 
+    fun deleteVoiceNote(voiceNote: VoiceNote) {
+        viewModelScope.launch {
+            voiceNoteRepository.deleteVoiceNote(voiceNote.id)
+        }
+    }
+
     fun clearMessage() { _importMessage.value = null }
 }

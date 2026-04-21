@@ -21,4 +21,7 @@ interface CheckInDao {
 
     @Delete
     suspend fun delete(checkIn: CheckIn)
+
+    @Query("DELETE FROM check_ins WHERE poi_id = :poiId")
+    suspend fun deleteForPoi(poiId: Long)
 }

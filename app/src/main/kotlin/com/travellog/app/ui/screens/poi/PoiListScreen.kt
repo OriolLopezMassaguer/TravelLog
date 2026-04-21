@@ -87,7 +87,10 @@ fun PoiListScreen(
                     isLoading = isLoading,
                     onCheckIn = viewModel::checkIn
                 )
-                1 -> CheckedInTab(pois = checkedIn)
+                1 -> CheckedInTab(
+                    pois     = checkedIn,
+                    onDelete = viewModel::deleteCheckIn
+                )
             }
         }
     }
@@ -110,7 +113,10 @@ private fun NearbyTab(
         contentPadding = PaddingValues(horizontal = 12.dp, vertical = 8.dp),
         verticalArrangement = Arrangement.spacedBy(8.dp)
     ) {
-        items(items = pois, key = { it.poi.id }) { item ->
+        items(
+            items = pois,
+            key = { it.poi.externalId ?: "nearby_${it.poi.id}_${it.poi.latitude}_${it.poi.longitude}" }
+        ) { item ->
             PoiCard(
                 poi           = item.poi,
                 distanceMeters = item.distanceMeters.takeIf { it < Float.MAX_VALUE },
@@ -123,7 +129,10 @@ private fun NearbyTab(
 // ── Checked-in tab ────────────────────────────────────────────────────────────
 
 @Composable
-private fun CheckedInTab(pois: List<com.travellog.app.data.db.entity.PointOfInterest>) {
+private fun CheckedInTab(
+    pois: List<com.travellog.app.data.db.entity.PointOfInterest>,
+    onDelete: (com.travellog.app.data.db.entity.PointOfInterest) -> Unit
+) {
     if (pois.isEmpty()) {
         EmptyState(stringResource(R.string.poi_empty_checked_in))
         return
@@ -134,7 +143,10 @@ private fun CheckedInTab(pois: List<com.travellog.app.data.db.entity.PointOfInte
         verticalArrangement = Arrangement.spacedBy(8.dp)
     ) {
         items(items = pois, key = { it.id }) { poi ->
-            PoiCard(poi = poi)
+            PoiCard(
+                poi      = poi,
+                onDelete = { onDelete(poi) }
+            )
         }
     }
 }

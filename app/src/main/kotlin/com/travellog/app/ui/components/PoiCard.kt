@@ -19,6 +19,7 @@ fun PoiCard(
     poi: PointOfInterest,
     distanceMeters: Float? = null,
     onCheckIn: (() -> Unit)? = null,
+    onDelete: (() -> Unit)? = null,
     modifier: Modifier = Modifier
 ) {
     Card(
@@ -79,11 +80,22 @@ fun PoiCard(
                 }
 
                 if (poi.checkedIn) {
-                    Icon(
-                        Icons.Default.CheckCircle,
-                        contentDescription = stringResource(R.string.poi_checked_in_desc),
-                        tint = MaterialTheme.colorScheme.primary
-                    )
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        if (onDelete != null) {
+                            IconButton(onClick = onDelete) {
+                                Icon(
+                                    Icons.Default.Delete,
+                                    contentDescription = "Delete check-in",
+                                    tint = MaterialTheme.colorScheme.error
+                                )
+                            }
+                        }
+                        Icon(
+                            Icons.Default.CheckCircle,
+                            contentDescription = stringResource(R.string.poi_checked_in_desc),
+                            tint = MaterialTheme.colorScheme.primary
+                        )
+                    }
                 } else if (onCheckIn != null) {
                     OutlinedButton(
                         onClick = onCheckIn,

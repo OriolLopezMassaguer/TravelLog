@@ -99,6 +99,8 @@ fun MapScreen(
     var showRecorder by remember { mutableStateOf(false) }
     // Holds the POI the user tapped on the map, triggering the check-in dialog
     val checkinDialogPoi = remember { mutableStateOf<PointOfInterest?>(null) }
+    val deleteCheckinPoi = remember { mutableStateOf<PointOfInterest?>(null) }
+    val deleteVoiceNote  = remember { mutableStateOf<VoiceNote?>(null) }
 
     // ── Permissions ──────────────────────────────────────────────────────────
     var locationGranted by remember {
@@ -166,14 +168,34 @@ fun MapScreen(
                 val pt = map.projection.toScreenLocation(latLng)
                 val slop = 24f
                 val rect = android.graphics.RectF(pt.x - slop, pt.y - slop, pt.x + slop, pt.y + slop)
-                val features = map.queryRenderedFeatures(rect, AVAILABLE_POI_LAYER)
-                if (features.isNotEmpty()) {
-                    val extId = features[0].getStringProperty("externalId")
+
+                // 1. Check for checked-in POIs (to delete check-in)
+                val poiFeatures = map.queryRenderedFeatures(rect, POI_LAYER)
+                if (poiFeatures.isNotEmpty()) {
+                    val id = poiFeatures[0].getNumberProperty("id")?.toLong() ?: return@addOnMapClickListener false
+                    deleteCheckinPoi.value = viewModel.checkedInPois.value.find { it.id == id }
+                    return@addOnMapClickListener deleteCheckinPoi.value != null
+                }
+
+                // 2. Check for voice notes (to delete)
+                val vnFeatures = map.queryRenderedFeatures(rect, VN_LAYER)
+                if (vnFeatures.isNotEmpty()) {
+                    val id = vnFeatures[0].getNumberProperty("id")?.toLong() ?: return@addOnMapClickListener false
+                    deleteVoiceNote.value = viewModel.voiceNotes.value.find { it.id == id }
+                    return@addOnMapClickListener deleteVoiceNote.value != null
+                }
+
+                // 3. Check for available POIs (to check in)
+                val availableFeatures = map.queryRenderedFeatures(rect, AVAILABLE_POI_LAYER)
+                if (availableFeatures.isNotEmpty()) {
+                    val extId = availableFeatures[0].getStringProperty("externalId")
                         ?.takeIf { it.isNotEmpty() }
                         ?: return@addOnMapClickListener false
                     checkinDialogPoi.value = viewModel.availablePois.value.find { it.externalId == extId }
-                    checkinDialogPoi.value != null
-                } else false
+                    return@addOnMapClickListener checkinDialogPoi.value != null
+                }
+
+                false
             }
         }
     }
@@ -301,6 +323,58 @@ fun MapScreen(
                 },
                 dismissButton = {
                     TextButton(onClick = { checkinDialogPoi.value = null }) { Text(stringResource(R.string.action_cancel)) }
+                }
+            )
+        }
+
+        // Delete check-in dialog
+        deleteCheckinPoi.value?.let { poi ->
+            AlertDialog(
+                onDismissRequest = { deleteCheckinPoi.value = null },
+                title = { Text(poi.name) },
+                text = { Text("Do you want to remove this check-in?") },
+                confirmButton = {
+                    Button(
+                        onClick = {
+                            viewModel.deleteCheckIn(poi)
+                            deleteCheckinPoi.value = null
+                        },
+                        colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error)
+                    ) { Text("Remove") }
+                },
+                dismissButton = {
+                    TextButton(onClick = { deleteCheckinPoi.value = null }) { Text(stringResource(R.string.action_cancel)) }
+                }
+            )
+        }
+
+        // Delete voice note dialog
+        deleteVoiceNote.value?.let { vn ->
+            AlertDialog(
+                onDismissRequest = { deleteVoiceNote.value = null },
+                title = { Text("Voice Note") },
+                text = {
+                    Column {
+                        Text("Duration: ${formatDuration(vn.durationSeconds)}")
+                        if (!vn.transcription.isNullOrBlank()) {
+                            Spacer(Modifier.height(8.dp))
+                            Text("“${vn.transcription}”", style = MaterialTheme.typography.bodySmall)
+                        }
+                        Spacer(Modifier.height(16.dp))
+                        Text("Do you want to delete this recording?")
+                    }
+                },
+                confirmButton = {
+                    Button(
+                        onClick = {
+                            viewModel.deleteVoiceNote(vn)
+                            deleteVoiceNote.value = null
+                        },
+                        colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error)
+                    ) { Text("Delete") }
+                },
+                dismissButton = {
+                    TextButton(onClick = { deleteVoiceNote.value = null }) { Text(stringResource(R.string.action_cancel)) }
                 }
             )
         }

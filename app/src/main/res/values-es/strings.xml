@@ -38,6 +38,9 @@
     <string name="export_no_gpx">No hay archivos GPX para este día.</string>
     <string name="export_try_again">Reintentar</string>
     <string name="export_share_html_subject">TravelLog \u2014 %1$s</string>
+    <string name="export_share_unified_gpx">Compartir GPX unificado</string>
+    <string name="export_share_unified_gpx_subject">Viaje TravelLog \u2014 %1$s</string>
+    <string name="export_share_unified_gpx_chooser">Compartir archivo GPX</string>
 
     <!-- POI screen -->
     <string name="poi_title">Lugares</string>

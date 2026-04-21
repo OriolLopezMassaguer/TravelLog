@@ -84,6 +84,13 @@ class PoiViewModel @Inject constructor(
         }
     }
 
+    fun deleteCheckIn(poi: PointOfInterest) {
+        viewModelScope.launch {
+            poiRepository.deleteCheckIn(poi.id)
+            refresh()
+        }
+    }
+
     fun clearError() { _error.value = null }
 
     // ── Helpers ───────────────────────────────────────────────────────────────

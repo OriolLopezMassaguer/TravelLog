@@ -13,6 +13,7 @@ import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Download
 import androidx.compose.material.icons.filled.Mic
 import androidx.compose.material.icons.filled.PlayCircle
@@ -101,7 +102,10 @@ fun MediaGalleryScreen(
 
             when (selectedTab) {
                 0 -> PhotoVideoGrid(mediaItems)
-                1 -> VoiceNoteList(voiceNotes)
+                1 -> VoiceNoteList(
+                    notes    = voiceNotes,
+                    onDelete = viewModel::deleteVoiceNote
+                )
             }
         }
     }
@@ -170,7 +174,10 @@ private fun MediaCell(item: MediaItem) {
 // ── Voice Notes ───────────────────────────────────────────────────────────────
 
 @Composable
-private fun VoiceNoteList(notes: List<VoiceNote>) {
+private fun VoiceNoteList(
+    notes: List<VoiceNote>,
+    onDelete: (VoiceNote) -> Unit
+) {
     if (notes.isEmpty()) {
         EmptyState(stringResource(R.string.media_empty_voice_notes))
         return
@@ -181,13 +188,45 @@ private fun VoiceNoteList(notes: List<VoiceNote>) {
         modifier = Modifier.fillMaxSize()
     ) {
         items(notes, key = { it.id }) { note ->
-            VoiceNoteCard(note)
+            VoiceNoteCard(
+                note     = note,
+                onDelete = { onDelete(note) }
+            )
         }
     }
 }
 
 @Composable
-private fun VoiceNoteCard(note: VoiceNote) {
+private fun VoiceNoteCard(
+    note: VoiceNote,
+    onDelete: () -> Unit
+) {
+    var showDeleteDialog by remember { mutableStateOf(false) }
+
+    if (showDeleteDialog) {
+        AlertDialog(
+            onDismissRequest = { showDeleteDialog = false },
+            title   = { Text(stringResource(R.string.delete_voice_note_title)) },
+            text    = { Text(stringResource(R.string.delete_voice_note_message)) },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        onDelete()
+                        showDeleteDialog = false
+                    },
+                    colors = ButtonDefaults.textButtonColors(contentColor = MaterialTheme.colorScheme.error)
+                ) {
+                    Text(stringResource(R.string.action_delete))
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showDeleteDialog = false }) {
+                    Text(stringResource(R.string.action_cancel))
+                }
+            }
+        )
+    }
+
     Card(
         modifier = Modifier.fillMaxWidth(),
         colors   = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
@@ -197,12 +236,14 @@ private fun VoiceNoteCard(note: VoiceNote) {
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(12.dp)
         ) {
-            Icon(
-                imageVector        = Icons.Default.Mic,
-                contentDescription = null,
-                tint               = MaterialTheme.colorScheme.primary,
-                modifier           = Modifier.size(36.dp)
-            )
+            IconButton(onClick = { /* Play logic if needed */ }) {
+                Icon(
+                    imageVector        = Icons.Default.PlayCircle,
+                    contentDescription = null,
+                    tint               = MaterialTheme.colorScheme.primary,
+                    modifier           = Modifier.size(36.dp)
+                )
+            }
             Column(modifier = Modifier.weight(1f)) {
                 Text(
                     text     = formatTimestamp(note.recordedAt),
@@ -219,11 +260,21 @@ private fun VoiceNoteCard(note: VoiceNote) {
                     )
                 }
             }
-            Text(
-                text  = formatDuration(note.durationSeconds),
-                style = MaterialTheme.typography.labelMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
+            Column(horizontalAlignment = Alignment.End) {
+                Text(
+                    text  = formatDuration(note.durationSeconds),
+                    style = MaterialTheme.typography.labelMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+                IconButton(onClick = { showDeleteDialog = true }) {
+                    Icon(
+                        imageVector = Icons.Default.Delete,
+                        contentDescription = stringResource(R.string.action_delete),
+                        tint = MaterialTheme.colorScheme.error,
+                        modifier = Modifier.size(20.dp)
+                    )
+                }
+            }
         }
     }
 }

@@ -34,6 +34,9 @@ interface PoiDao {
     @Query("UPDATE points_of_interest SET checked_in = 1, checked_in_at = :checkedInAt WHERE id = :id")
     suspend fun checkIn(id: Long, checkedInAt: Long)
 
+    @Query("UPDATE points_of_interest SET checked_in = 0, checked_in_at = NULL WHERE id = :id")
+    suspend fun uncheckIn(id: Long)
+
     @Query("""
         SELECT * FROM points_of_interest
         WHERE day_id = :dayId

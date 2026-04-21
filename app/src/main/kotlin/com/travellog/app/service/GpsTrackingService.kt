@@ -221,8 +221,6 @@ class GpsTrackingService : Service() {
 
         if (shouldFlush) flushBuffer()
 
-        checkProximityToPois(location)
-
         @Suppress("MissingPermission")
         val nm = getSystemService(NOTIFICATION_SERVICE) as android.app.NotificationManager
         nm.notify(
@@ -248,31 +246,5 @@ class GpsTrackingService : Service() {
         trackingRepository.insertBatch(batch)
         gpxWriter.appendPoints(batch)
         lastFlushMs = System.currentTimeMillis()
-    }
-
-    // ── Automatic POI check-in ────────────────────────────────────────────────
-
-    private suspend fun checkProximityToPois(location: android.location.Location) {
-        val now = System.currentTimeMillis()
-        if ((now - lastPoiCacheMs) >= POI_CACHE_INTERVAL_MS) {
-            poiCache = try {
-                poiRepository.fetchNearbyPois(location.latitude, location.longitude, currentDayId)
-            } catch (_: Exception) { poiCache }
-            lastPoiCacheMs = now
-        }
-
-        val dist = FloatArray(1)
-        for (poi in poiCache) {
-            val key = poi.externalId ?: continue
-            if (key in autoCheckedInExternalIds) continue
-            android.location.Location.distanceBetween(
-                location.latitude, location.longitude,
-                poi.latitude, poi.longitude, dist
-            )
-            if (dist[0] <= POI_AUTO_RADIUS_M) {
-                autoCheckedInExternalIds += key
-                poiRepository.checkIn(poi, currentDayId, location)
-            }
-        }
     }
 }

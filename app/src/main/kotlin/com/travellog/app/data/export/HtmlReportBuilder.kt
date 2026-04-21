@@ -22,7 +22,12 @@ class HtmlReportBuilder @Inject constructor(
     private val dateFormatter = DateTimeFormatter.ofPattern("EEEE, MMMM d, yyyy")
     private val timeFormatter = DateTimeFormatter.ofPattern("HH:mm")
 
-    suspend fun build(report: DayReport): String {
+    suspend fun build(
+        report: DayReport,
+        unifiedGpx: String? = null,
+        trackGpx: String? = null,
+        poisGpx: String? = null
+    ): String {
         val day     = report.day
         val title   = day.title ?: context.getString(R.string.report_default_day_title, day.date)
         val dateStr = LocalDate.parse(day.date).format(dateFormatter)
@@ -30,12 +35,21 @@ class HtmlReportBuilder @Inject constructor(
 
         val timeline  = buildTimeline(report)
         val mapBase64 = buildMapImage(report)
+        
+        val unifiedGpxBase64 = unifiedGpx?.let { Base64.encodeToString(it.toByteArray(), Base64.NO_WRAP) }
+        val trackGpxBase64   = trackGpx?.let { Base64.encodeToString(it.toByteArray(), Base64.NO_WRAP) }
+        val poisGpxBase64    = poisGpx?.let { Base64.encodeToString(it.toByteArray(), Base64.NO_WRAP) }
 
         return buildString {
             append(htmlHead(title))
             append("<body>")
             append(headerSection(title, dateStr, distKm, report))
             if (mapBase64 != null) append(mapSection(mapBase64))
+            
+            if (trackGpxBase64 != null || poisGpxBase64 != null || unifiedGpxBase64 != null) {
+                append(gpxDownloadSection(trackGpxBase64, poisGpxBase64, unifiedGpxBase64, day.date))
+            }
+
             if (!day.notes.isNullOrBlank()) append(notesSection(day.notes))
             if (timeline.isNotEmpty()) append(timelineSection(timeline))
             append("</body></html>")
@@ -149,6 +163,35 @@ class HtmlReportBuilder @Inject constructor(
         append("</div>")
     }
 
+    private fun gpxDownloadSection(
+        trackBase64: String?,
+        poisBase64: String?,
+        unifiedBase64: String?,
+        date: String
+    ) = buildString {
+        append("<div class=\"gpx-download\">")
+        
+        if (trackBase64 != null) {
+            append("<a class=\"gpx-btn\" href=\"data:application/gpx+xml;base64,$trackBase64\" download=\"track_$date.gpx\">")
+            append("&#x1F4E5; Track GPX")
+            append("</a> ")
+        }
+
+        if (poisBase64 != null) {
+            append("<a class=\"gpx-btn\" href=\"data:application/gpx+xml;base64,$poisBase64\" download=\"pois_$date.gpx\">")
+            append("&#x1F4E5; POIs GPX")
+            append("</a> ")
+        }
+
+        if (unifiedBase64 != null) {
+            append("<a class=\"gpx-btn\" href=\"data:application/gpx+xml;base64,$unifiedBase64\" download=\"trip_$date.gpx\">")
+            append("&#x1F4E5; Full GPX")
+            append("</a>")
+        }
+
+        append("</div>")
+    }
+
     private fun notesSection(notes: String) =
         "<h2>${context.getString(R.string.report_section_notes).escapeHtml()}</h2>" +
         "<div class=\"notes\">${notes.escapeHtml()}</div>"
@@ -249,6 +292,14 @@ class HtmlReportBuilder @Inject constructor(
         else Base64.encodeToString(file.readBytes(), Base64.NO_WRAP)
     } catch (_: Exception) { null }
 
+    private fun buildGpxData(date: String): String? = try {
+        val base = context.getExternalFilesDir(null) ?: context.filesDir
+        val gpxFile = java.io.File(base, "TravelLog/days/$date/track.gpx")
+        if (gpxFile.exists()) {
+            Base64.encodeToString(gpxFile.readBytes(), Base64.NO_WRAP)
+        } else null
+    } catch (_: Exception) { null }
+
     private fun audioMimeType(filePath: String): String = when {
         filePath.endsWith(".m4a",  ignoreCase = true) -> "audio/mp4"
         filePath.endsWith(".ogg",  ignoreCase = true) -> "audio/ogg"
@@ -290,6 +341,11 @@ class HtmlReportBuilder @Inject constructor(
     .map-wrap { margin-bottom: 28px; border-radius: 8px; overflow: hidden;
                 border: 1px solid #ddd; }
     .map-img { width: 100%; display: block; }
+    .gpx-download { margin-bottom: 28px; text-align: center; }
+    .gpx-btn { display: inline-block; background: #222; color: #fff; 
+               text-decoration: none; padding: 10px 20px; border-radius: 4px;
+               font-family: sans-serif; font-weight: bold; font-size: 0.9rem; }
+    .gpx-btn:hover { background: #444; }
     .notes { background: #fffbe6; border-left: 3px solid #f5c518;
              padding: 12px 16px; border-radius: 4px; font-style: italic; }
     /* Timeline */

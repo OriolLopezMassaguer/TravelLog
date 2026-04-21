@@ -94,4 +94,21 @@ class MapViewModel @Inject constructor(
             _availablePois.update { current -> current.filter { it.externalId != poi.externalId } }
         }
     }
+
+    fun deleteCheckIn(poi: PointOfInterest) {
+        viewModelScope.launch {
+            poiRepository.deleteCheckIn(poi.id)
+            refreshPois()
+        }
+    }
+
+    fun deleteVoiceNote(voiceNote: VoiceNote) {
+        viewModelScope.launch {
+            voiceNoteRepository.deleteVoiceNote(voiceNote.id)
+        }
+    }
+
+    fun stopTracking(context: android.content.Context) {
+        context.stopService(GpsTrackingService.stopIntent(context))
+    }
 }

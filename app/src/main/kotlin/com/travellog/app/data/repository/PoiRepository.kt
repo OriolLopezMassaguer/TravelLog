@@ -68,6 +68,14 @@ class PoiRepository @Inject constructor(
         rewritePoiGpx(dayId)
     }
 
+    suspend fun deleteCheckIn(poiId: Long) {
+        val poi = poiDao.getById(poiId) ?: return
+        val dayId = poi.dayId
+        poiDao.uncheckIn(poiId)
+        checkInDao.deleteForPoi(poiId)
+        rewritePoiGpx(dayId)
+    }
+
     // ── Helpers ───────────────────────────────────────────────────────────────
 
     private suspend fun rewritePoiGpx(dayId: Long) {
@@ -81,11 +89,11 @@ class PoiRepository @Inject constructor(
         val poiName = name ?: return null
         return PointOfInterest(
             dayId        = dayId,
-            externalId   = "osm:node/$id",
+            externalId   = "osm:$type/$id",
             name         = poiName,
             category     = category,
-            latitude     = lat,
-            longitude    = lon,
+            latitude     = latValue,
+            longitude    = lonValue,
             address      = address,
             openingHours = tags["opening_hours"],
             website      = tags["website"],

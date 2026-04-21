@@ -22,15 +22,16 @@ class OverpassService @Inject constructor() {
     suspend fun queryNearby(
         lat: Double,
         lon: Double,
-        radiusMeters: Int = 500
+        radiusMeters: Int = 1000
     ): List<OverpassElement> = withContext(Dispatchers.IO) {
         try {
             val query = buildQuery(lat, lon, radiusMeters)
             val json  = httpPost(ENDPOINT, query)
-            gson.fromJson(json, OverpassResponse::class.java)
-                .elements
+            val response = gson.fromJson(json, OverpassResponse::class.java)
+            response.elements
                 .filter { it.name != null }   // skip unnamed elements
         } catch (e: Exception) {
+            e.printStackTrace()
             emptyList()
         }
     }
@@ -40,14 +41,14 @@ class OverpassService @Inject constructor() {
     private fun buildQuery(lat: Double, lon: Double, radius: Int): String {
         val around = "(around:$radius,$lat,$lon)"
         return """
-            [out:json][timeout:25];
+            [out:json][timeout:30];
             (
-              node["amenity"~"restaurant|cafe|bar|pub|fast_food|museum|theatre|cinema|hotel|pharmacy|bank"]$around;
-              node["tourism"~"attraction|viewpoint|museum|hotel|hostel|guest_house|artwork|gallery"]$around;
-              node["historic"]$around;
-              node["leisure"~"park|garden|nature_reserve"]$around;
+              nwr["amenity"~"restaurant|cafe|bar|pub|fast_food|museum|theatre|cinema|hotel|pharmacy|bank"]$around;
+              nwr["tourism"~"attraction|viewpoint|museum|hotel|hostel|guest_house|artwork|gallery"]$around;
+              nwr["historic"]$around;
+              nwr["leisure"~"park|garden|nature_reserve"]$around;
             );
-            out body;
+            out body center;
         """.trimIndent()
     }
 
