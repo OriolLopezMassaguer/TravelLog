@@ -60,7 +60,7 @@ class ExportViewModel @Inject constructor(
             _exportState.value = ExportState.Building
             try {
                 val report = withContext(Dispatchers.IO) { gatherReport(dayId) }
-                val html   = withContext(Dispatchers.IO) { htmlBuilder.build(report) }
+                val html   = htmlBuilder.build(report)
                 _exportState.value = ExportState.Ready(html, report.day)
             } catch (e: Exception) {
                 _exportState.value = ExportState.Error(e.message ?: "Export failed")

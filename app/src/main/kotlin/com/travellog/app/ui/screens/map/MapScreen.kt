@@ -63,6 +63,7 @@ private const val POI_LAYER       = "poi-layer"
 private const val POI_LABEL_LAYER = "poi-label-layer"
 private const val VN_SOURCE            = "vn-source"
 private const val VN_LAYER             = "vn-layer"
+private const val VN_LABEL_LAYER       = "vn-label-layer"
 private const val AVAILABLE_POI_SOURCE = "available-poi-source"
 private const val AVAILABLE_POI_LAYER  = "available-poi-layer"
 private const val AVAILABLE_POI_LABEL  = "available-poi-label-layer"
@@ -72,8 +73,10 @@ private const val TRACK_END_SOURCE     = "track-end-source"
 private const val TRACK_END_LAYER      = "track-end-layer"
 private const val PHOTO_SOURCE         = "photo-source"
 private const val PHOTO_LAYER          = "photo-layer"
+private const val PHOTO_LABEL_LAYER    = "photo-label-layer"
 private const val VIDEO_SOURCE         = "video-source"
 private const val VIDEO_LAYER          = "video-layer"
+private const val VIDEO_LABEL_LAYER    = "video-label-layer"
 
 @Composable
 fun MapScreen(
@@ -453,10 +456,21 @@ private fun initVoiceNoteLayer(style: Style) {
     style.addSource(GeoJsonSource(VN_SOURCE, FeatureCollection.fromFeatures(emptyList())))
     style.addLayer(
         CircleLayer(VN_LAYER, VN_SOURCE).withProperties(
-            PropertyFactory.circleColor("#E65100"),     // deep orange
+            PropertyFactory.circleColor("#E65100"),
             PropertyFactory.circleRadius(8f),
             PropertyFactory.circleStrokeColor("#FFFFFF"),
             PropertyFactory.circleStrokeWidth(2f)
+        )
+    )
+    style.addLayer(
+        SymbolLayer(VN_LABEL_LAYER, VN_SOURCE).withProperties(
+            PropertyFactory.textField("{label}"),
+            PropertyFactory.textSize(10f),
+            PropertyFactory.textColor("#BF360C"),
+            PropertyFactory.textHaloColor("#FFFFFF"),
+            PropertyFactory.textHaloWidth(1.5f),
+            PropertyFactory.textOffset(arrayOf(0f, -1.8f)),
+            PropertyFactory.textAnchor(Property.TEXT_ANCHOR_BOTTOM)
         )
     )
 }
@@ -465,19 +479,41 @@ private fun initMediaLayers(style: Style) {
     style.addSource(GeoJsonSource(PHOTO_SOURCE, FeatureCollection.fromFeatures(emptyList())))
     style.addLayer(
         CircleLayer(PHOTO_LAYER, PHOTO_SOURCE).withProperties(
-            PropertyFactory.circleColor("#00B0FF"),   // cyan-blue — photo
+            PropertyFactory.circleColor("#00B0FF"),
             PropertyFactory.circleRadius(8f),
             PropertyFactory.circleStrokeColor("#FFFFFF"),
             PropertyFactory.circleStrokeWidth(2f)
         )
     )
+    style.addLayer(
+        SymbolLayer(PHOTO_LABEL_LAYER, PHOTO_SOURCE).withProperties(
+            PropertyFactory.textField("{label}"),
+            PropertyFactory.textSize(10f),
+            PropertyFactory.textColor("#0277BD"),
+            PropertyFactory.textHaloColor("#FFFFFF"),
+            PropertyFactory.textHaloWidth(1.5f),
+            PropertyFactory.textOffset(arrayOf(0f, -1.8f)),
+            PropertyFactory.textAnchor(Property.TEXT_ANCHOR_BOTTOM)
+        )
+    )
     style.addSource(GeoJsonSource(VIDEO_SOURCE, FeatureCollection.fromFeatures(emptyList())))
     style.addLayer(
         CircleLayer(VIDEO_LAYER, VIDEO_SOURCE).withProperties(
-            PropertyFactory.circleColor("#AA00FF"),   // purple — video
+            PropertyFactory.circleColor("#AA00FF"),
             PropertyFactory.circleRadius(8f),
             PropertyFactory.circleStrokeColor("#FFFFFF"),
             PropertyFactory.circleStrokeWidth(2f)
+        )
+    )
+    style.addLayer(
+        SymbolLayer(VIDEO_LABEL_LAYER, VIDEO_SOURCE).withProperties(
+            PropertyFactory.textField("{label}"),
+            PropertyFactory.textSize(10f),
+            PropertyFactory.textColor("#6A1B9A"),
+            PropertyFactory.textHaloColor("#FFFFFF"),
+            PropertyFactory.textHaloWidth(1.5f),
+            PropertyFactory.textOffset(arrayOf(0f, -1.8f)),
+            PropertyFactory.textAnchor(Property.TEXT_ANCHOR_BOTTOM)
         )
     )
 }
@@ -492,6 +528,7 @@ private fun updateMediaMarkers(style: Style, items: List<MediaItem>) {
             val lon = item.longitude ?: return@mapNotNull null
             Feature.fromGeometry(Point.fromLngLat(lon, lat)).apply {
                 addNumberProperty("id", item.id)
+                addStringProperty("label", "Photo " + formatEpochTime(item.recordedAt))
             }
         }
     val videoFeatures = items
@@ -501,6 +538,9 @@ private fun updateMediaMarkers(style: Style, items: List<MediaItem>) {
             val lon = item.longitude ?: return@mapNotNull null
             Feature.fromGeometry(Point.fromLngLat(lon, lat)).apply {
                 addNumberProperty("id", item.id)
+                val dur = item.durationSeconds?.let { formatDuration(it) } ?: ""
+                addStringProperty("label", if (dur.isEmpty()) "Video " + formatEpochTime(item.recordedAt)
+                                           else "Video $dur")
             }
         }
     photoSource.setGeoJson(FeatureCollection.fromFeatures(photoFeatures))
@@ -514,10 +554,20 @@ private fun updateVoiceNoteMarkers(style: Style, notes: List<VoiceNote>) {
         .map { note ->
             Feature.fromGeometry(Point.fromLngLat(note.longitude, note.latitude)).apply {
                 addNumberProperty("id", note.id)
-                addNumberProperty("duration", note.durationSeconds)
+                addStringProperty("label", "Voice " + formatDuration(note.durationSeconds))
             }
         }
     source.setGeoJson(FeatureCollection.fromFeatures(features))
+}
+
+private fun formatEpochTime(epochMs: Long): String {
+    val cal = java.util.Calendar.getInstance().apply { timeInMillis = epochMs }
+    return "%02d:%02d".format(cal.get(java.util.Calendar.HOUR_OF_DAY), cal.get(java.util.Calendar.MINUTE))
+}
+
+private fun formatDuration(seconds: Int): String {
+    val m = seconds / 60; val s = seconds % 60
+    return "%d:%02d".format(m, s)
 }
 
 @SuppressLint("MissingPermission")

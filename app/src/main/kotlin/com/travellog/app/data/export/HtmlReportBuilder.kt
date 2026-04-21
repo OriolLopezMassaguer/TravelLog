@@ -22,7 +22,7 @@ class HtmlReportBuilder @Inject constructor(
     private val dateFormatter = DateTimeFormatter.ofPattern("EEEE, MMMM d, yyyy")
     private val timeFormatter = DateTimeFormatter.ofPattern("HH:mm")
 
-    fun build(report: DayReport): String {
+    suspend fun build(report: DayReport): String {
         val day     = report.day
         val title   = day.title ?: context.getString(R.string.report_default_day_title, day.date)
         val dateStr = LocalDate.parse(day.date).format(dateFormatter)
@@ -93,7 +93,7 @@ class HtmlReportBuilder @Inject constructor(
 
     // ── Map image builder ─────────────────────────────────────────────────────
 
-    private fun buildMapImage(report: DayReport): String? {
+    private suspend fun buildMapImage(report: DayReport): String? {
         val markers = mutableListOf<MapImageRenderer.Marker>()
 
         report.checkedInPois.forEach { poi ->
