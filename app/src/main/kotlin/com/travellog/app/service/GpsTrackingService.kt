@@ -7,14 +7,19 @@ import android.content.Intent
 import android.os.IBinder
 import android.os.Looper
 import com.google.android.gms.location.*
+import com.travellog.app.data.db.entity.PointOfInterest
 import com.travellog.app.data.db.entity.TrackPoint
 import com.travellog.app.data.gpx.GpxWriter
+import com.travellog.app.data.repository.PoiRepository
 import com.travellog.app.data.repository.TravelDayRepository
 import com.travellog.app.data.repository.TrackingRepository
 import com.travellog.app.data.settings.AppSettings
 import com.travellog.app.data.settings.SettingsRepository
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.*
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.first
 import javax.inject.Inject
 
@@ -32,13 +37,14 @@ class GpsTrackingService : Service() {
     @Inject lateinit var trackingRepository: TrackingRepository
     @Inject lateinit var gpxWriter: GpxWriter
     @Inject lateinit var settingsRepository: SettingsRepository
+    @Inject lateinit var poiRepository: PoiRepository
 
     private lateinit var fusedLocationClient: FusedLocationProviderClient
     private lateinit var locationCallback: LocationCallback
 
     private val serviceScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
 
-    private var currentDayId: Long = -1
+    @Volatile private var currentDayId: Long = -1
     private val pointBuffer = mutableListOf<TrackPoint>()
     private var lastFlushMs = 0L
     private var totalDistanceMeters = 0.0
@@ -48,18 +54,30 @@ class GpsTrackingService : Service() {
     private var currentSettings = AppSettings()
     private var stationaryCount = 0
     private var isLowPowerMode  = false
+    private var isTracking      = false
+
+    // Auto POI check-in state
+    private var poiCache: List<PointOfInterest> = emptyList()
+    private var lastPoiCacheMs = 0L
+    private val autoCheckedInPoiIds = mutableSetOf<Long>()
 
     companion object {
         const val ACTION_START = "com.travellog.app.ACTION_START_TRACKING"
         const val ACTION_STOP  = "com.travellog.app.ACTION_STOP_TRACKING"
 
-        private const val BUFFER_MAX_SIZE = 10
-        private const val FLUSH_INTERVAL_MS = 30_000L
+        private const val BUFFER_MAX_SIZE = 3
+        private const val FLUSH_INTERVAL_MS = 5_000L
         private const val LOCATION_MIN_DISTANCE_M = 5f
 
-        private const val STATIONARY_SPEED_MS        = 0.5f   // m/s
-        private const val STATIONARY_COUNT_THRESHOLD = 3      // consecutive slow readings
+        private const val STATIONARY_SPEED_MS        = 0.5f
+        private const val STATIONARY_COUNT_THRESHOLD = 3
         private const val LOW_POWER_INTERVAL_MS      = 60_000L
+
+        private const val POI_AUTO_RADIUS_M      = 80f
+        private const val POI_CACHE_INTERVAL_MS  = 2 * 60_000L
+
+        private val _isRunning = MutableStateFlow(false)
+        val isRunning: StateFlow<Boolean> = _isRunning.asStateFlow()
 
         fun startIntent(context: Context) =
             Intent(context, GpsTrackingService::class.java).apply { action = ACTION_START }
@@ -93,6 +111,9 @@ class GpsTrackingService : Service() {
     // ── Start / stop ─────────────────────────────────────────────────────────
 
     private fun startTracking() {
+        if (isTracking) return
+        isTracking = true
+        _isRunning.value = true
         serviceScope.launch {
             currentSettings = settingsRepository.settings.first()
 
@@ -112,6 +133,8 @@ class GpsTrackingService : Service() {
     }
 
     private fun stopTracking() {
+        isTracking = false
+        _isRunning.value = false
         fusedLocationClient.removeLocationUpdates(locationCallback)
 
         serviceScope.launch {
@@ -198,6 +221,8 @@ class GpsTrackingService : Service() {
 
         if (shouldFlush) flushBuffer()
 
+        checkProximityToPois(location)
+
         @Suppress("MissingPermission")
         val nm = getSystemService(NOTIFICATION_SERVICE) as android.app.NotificationManager
         nm.notify(
@@ -223,5 +248,30 @@ class GpsTrackingService : Service() {
         trackingRepository.insertBatch(batch)
         gpxWriter.appendPoints(batch)
         lastFlushMs = System.currentTimeMillis()
+    }
+
+    // ── Automatic POI check-in ────────────────────────────────────────────────
+
+    private suspend fun checkProximityToPois(location: android.location.Location) {
+        val now = System.currentTimeMillis()
+        if ((now - lastPoiCacheMs) >= POI_CACHE_INTERVAL_MS) {
+            poiCache = try {
+                poiRepository.fetchNearbyPois(location.latitude, location.longitude, currentDayId)
+            } catch (_: Exception) { poiCache }
+            lastPoiCacheMs = now
+        }
+
+        val dist = FloatArray(1)
+        for (poi in poiCache) {
+            if (poi.checkedIn || poi.id in autoCheckedInPoiIds) continue
+            android.location.Location.distanceBetween(
+                location.latitude, location.longitude,
+                poi.latitude, poi.longitude, dist
+            )
+            if (dist[0] <= POI_AUTO_RADIUS_M) {
+                autoCheckedInPoiIds += poi.id
+                poiRepository.checkIn(poi.id, currentDayId, location)
+            }
+        }
     }
 }

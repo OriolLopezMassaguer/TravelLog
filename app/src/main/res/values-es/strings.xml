@@ -90,6 +90,8 @@
     <string name="map_record_voice_desc">Grabar nota de voz</string>
     <string name="map_my_location_desc">Mi ubicación</string>
     <string name="map_checkin_dialog_confirm">Registrar</string>
+    <string name="map_tracking_active">● Grabando · %1$d pts</string>
+    <string name="map_tracking_inactive">● Sin grabación</string>
 
     <!-- Voice recorder sheet -->
     <string name="recorder_title">Nota de voz</string>

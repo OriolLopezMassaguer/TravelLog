@@ -63,8 +63,8 @@ class PoiRepository @Inject constructor(
         // Write / refresh pois.gpx
         val day = travelDayRepository.getByDate(LocalDate.now().toString())
         if (day != null) {
-            val allPois = poiDao.getPoisForDayOnce(dayId)
-            val file    = gpxPoiWriter.writeAll(day.date, allPois)
+            val checkedIn = poiDao.getPoisForDayOnce(dayId).filter { it.checkedIn }
+            val file      = gpxPoiWriter.writeAll(day.date, checkedIn)
             if (day.gpxPoiPath == null) {
                 travelDayRepository.setGpxPoiPath(dayId, file.absolutePath)
             }
@@ -94,9 +94,9 @@ class PoiRepository @Inject constructor(
     // ── Helpers ───────────────────────────────────────────────────────────────
 
     private suspend fun rewritePoiGpx(dayId: Long) {
-        val day  = travelDayRepository.getByDate(LocalDate.now().toString()) ?: return
-        val pois = poiDao.getPoisForDayOnce(dayId)
-        val file = gpxPoiWriter.writeAll(day.date, pois)
+        val day       = travelDayRepository.getByDate(LocalDate.now().toString()) ?: return
+        val checkedIn = poiDao.getPoisForDayOnce(dayId).filter { it.checkedIn }
+        val file      = gpxPoiWriter.writeAll(day.date, checkedIn)
         travelDayRepository.setGpxPoiPath(dayId, file.absolutePath)
     }
 

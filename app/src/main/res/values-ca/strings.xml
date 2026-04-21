@@ -90,6 +90,8 @@
     <string name="map_record_voice_desc">Enregistrar nota de veu</string>
     <string name="map_my_location_desc">La meva ubicació</string>
     <string name="map_checkin_dialog_confirm">Registrar</string>
+    <string name="map_tracking_active">● Enregistrant · %1$d pts</string>
+    <string name="map_tracking_inactive">● No enregistrant</string>
 
     <!-- Voice recorder sheet -->
     <string name="recorder_title">Nota de veu</string>

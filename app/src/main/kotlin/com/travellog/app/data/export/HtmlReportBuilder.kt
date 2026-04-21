@@ -84,6 +84,7 @@ class HtmlReportBuilder @Inject constructor(
                 longitude       = vn.longitude.takeIf { it != 0.0 },
                 durationSeconds = vn.durationSeconds,
                 transcription   = vn.transcription,
+                filePath        = vn.filePath,
             )
         }
 
@@ -93,8 +94,6 @@ class HtmlReportBuilder @Inject constructor(
     // ── Map image builder ─────────────────────────────────────────────────────
 
     private fun buildMapImage(report: DayReport): String? {
-        if (report.trackPoints.isEmpty()) return null
-
         val markers = mutableListOf<MapImageRenderer.Marker>()
 
         report.checkedInPois.forEach { poi ->
@@ -206,11 +205,19 @@ class HtmlReportBuilder @Inject constructor(
             }
 
             is TimelineEvent.VoiceNoteEvent -> buildString {
+                val audioB64  = encodeAudio(event.filePath)
+                val audioMime = audioMimeType(event.filePath)
                 append("<div class=\"tl-item tl-vn\">")
                 append("<div class=\"tl-time\">$time</div>")
                 append("<div class=\"tl-body\">")
                 append("<span class=\"tl-type tl-tag-vn\">${context.getString(R.string.report_type_voice_note).escapeHtml()}</span>")
                 append("<div class=\"tl-meta\">${formatDuration(event.durationSeconds)}</div>")
+                if (audioB64 != null) {
+                    append("<audio class=\"tl-audio\" controls preload=\"metadata\">")
+                    append("<source src=\"data:$audioMime;base64,$audioB64\" type=\"$audioMime\">")
+                    append("</audio>")
+                    append("<div class=\"tl-audio-print\">&#127908;&nbsp;${formatDuration(event.durationSeconds)}</div>")
+                }
                 if (!event.transcription.isNullOrBlank())
                     append("<div class=\"tl-quote\">&ldquo;${event.transcription.escapeHtml()}&rdquo;</div>")
                 if (coordHtml != null) append(coordHtml)
@@ -235,6 +242,21 @@ class HtmlReportBuilder @Inject constructor(
         bmp.recycle()
         Base64.encodeToString(baos.toByteArray(), Base64.NO_WRAP)
     } catch (_: Exception) { null }
+
+    private fun encodeAudio(filePath: String): String? = try {
+        val file = java.io.File(filePath)
+        if (!file.exists() || file.length() > 5 * 1024 * 1024) null
+        else Base64.encodeToString(file.readBytes(), Base64.NO_WRAP)
+    } catch (_: Exception) { null }
+
+    private fun audioMimeType(filePath: String): String = when {
+        filePath.endsWith(".m4a",  ignoreCase = true) -> "audio/mp4"
+        filePath.endsWith(".ogg",  ignoreCase = true) -> "audio/ogg"
+        filePath.endsWith(".opus", ignoreCase = true) -> "audio/ogg; codecs=opus"
+        filePath.endsWith(".3gp",  ignoreCase = true) -> "audio/3gpp"
+        filePath.endsWith(".aac",  ignoreCase = true) -> "audio/aac"
+        else                                          -> "audio/mpeg"
+    }
 
     // ── Helpers ───────────────────────────────────────────────────────────────
 
@@ -292,10 +314,14 @@ class HtmlReportBuilder @Inject constructor(
     .tl-quote { font-style: italic; color: #444; margin-top: 4px; font-size: 0.88rem; }
     .tl-thumb { max-width: 160px; max-height: 120px; object-fit: cover;
                 border-radius: 4px; margin-top: 6px; display: block; }
+    .tl-audio { width: 100%; margin-top: 8px; }
+    .tl-audio-print { display: none; }
     @media print {
       body { padding: 0; max-width: 100%; }
       .tl-item { break-inside: avoid; }
       .timeline::before { display: none; }
+      .tl-audio { display: none; }
+      .tl-audio-print { display: block; color: #666; font-size: 0.8rem; margin-top: 4px; }
     }
   </style>
 </head>

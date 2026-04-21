@@ -90,6 +90,8 @@
     <string name="map_record_voice_desc">Record voice note</string>
     <string name="map_my_location_desc">My location</string>
     <string name="map_checkin_dialog_confirm">Check In</string>
+    <string name="map_tracking_active">● Recording · %1$d pts</string>
+    <string name="map_tracking_inactive">● Not recording</string>
 
     <!-- Voice recorder sheet -->
     <string name="recorder_title">Voice Note</string>

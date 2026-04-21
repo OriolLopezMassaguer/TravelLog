@@ -13,6 +13,7 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
@@ -25,6 +26,7 @@ import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavController
+import com.travellog.app.data.db.entity.MediaItem
 import com.travellog.app.data.db.entity.PointOfInterest
 import com.travellog.app.data.db.entity.TrackPoint
 import com.travellog.app.data.db.entity.VoiceNote
@@ -64,6 +66,14 @@ private const val VN_LAYER             = "vn-layer"
 private const val AVAILABLE_POI_SOURCE = "available-poi-source"
 private const val AVAILABLE_POI_LAYER  = "available-poi-layer"
 private const val AVAILABLE_POI_LABEL  = "available-poi-label-layer"
+private const val TRACK_START_SOURCE   = "track-start-source"
+private const val TRACK_START_LAYER    = "track-start-layer"
+private const val TRACK_END_SOURCE     = "track-end-source"
+private const val TRACK_END_LAYER      = "track-end-layer"
+private const val PHOTO_SOURCE         = "photo-source"
+private const val PHOTO_LAYER          = "photo-layer"
+private const val VIDEO_SOURCE         = "video-source"
+private const val VIDEO_LAYER          = "video-layer"
 
 @Composable
 fun MapScreen(
@@ -74,12 +84,14 @@ fun MapScreen(
     val context      = LocalContext.current
     val lifecycle    = LocalLifecycleOwner.current
 
-    val days           by viewModel.days.collectAsStateWithLifecycle()
-    val selectedDayId  by viewModel.selectedDayId.collectAsStateWithLifecycle()
-    val trackPoints    by viewModel.trackPoints.collectAsStateWithLifecycle()
-    val checkedInPois  by viewModel.checkedInPois.collectAsStateWithLifecycle()
-    val availablePois  by viewModel.availablePois.collectAsStateWithLifecycle()
-    val voiceNotes     by viewModel.voiceNotes.collectAsStateWithLifecycle()
+    val days              by viewModel.days.collectAsStateWithLifecycle()
+    val selectedDayId     by viewModel.selectedDayId.collectAsStateWithLifecycle()
+    val trackPoints       by viewModel.trackPoints.collectAsStateWithLifecycle()
+    val checkedInPois     by viewModel.checkedInPois.collectAsStateWithLifecycle()
+    val availablePois     by viewModel.availablePois.collectAsStateWithLifecycle()
+    val voiceNotes        by viewModel.voiceNotes.collectAsStateWithLifecycle()
+    val mediaItems        by viewModel.mediaItems.collectAsStateWithLifecycle()
+    val isTrackingActive  by viewModel.isTrackingActive.collectAsStateWithLifecycle()
 
     var showRecorder by remember { mutableStateOf(false) }
     // Holds the POI the user tapped on the map, triggering the check-in dialog
@@ -145,10 +157,13 @@ fun MapScreen(
                 initAvailablePoiLayer(style)
                 initPoiLayer(style)
                 initVoiceNoteLayer(style)
+                initMediaLayers(style)
             }
             map.addOnMapClickListener { latLng ->
-                val screenPoint = map.projection.toScreenLocation(latLng)
-                val features = map.queryRenderedFeatures(screenPoint, AVAILABLE_POI_LAYER)
+                val pt = map.projection.toScreenLocation(latLng)
+                val slop = 24f
+                val rect = android.graphics.RectF(pt.x - slop, pt.y - slop, pt.x + slop, pt.y + slop)
+                val features = map.queryRenderedFeatures(rect, AVAILABLE_POI_LAYER)
                 if (features.isNotEmpty()) {
                     val id = features[0].getNumberProperty("id")?.toLong()
                         ?: return@addOnMapClickListener false
@@ -159,11 +174,19 @@ fun MapScreen(
         }
     }
 
-    // Enable location dot whenever both style and permission are ready
+    // Enable location dot and load nearby POIs whenever both style and permission are ready
     LaunchedEffect(styleRef, locationGranted) {
         val m = mapRef   ?: return@LaunchedEffect
         val s = styleRef ?: return@LaunchedEffect
-        if (locationGranted) enableLocationComponent(context, m, s)
+        if (locationGranted) {
+            enableLocationComponent(context, m, s)
+            viewModel.refreshPois()
+        }
+    }
+
+    // Re-fetch POIs when the selected day changes (e.g. browsing a past day)
+    LaunchedEffect(selectedDayId) {
+        if (locationGranted) viewModel.refreshPois()
     }
 
     // Update track polyline whenever style or points change
@@ -190,8 +213,14 @@ fun MapScreen(
         updateVoiceNoteMarkers(s, voiceNotes)
     }
 
-    // Animate camera to fit the track when day or points change
-    LaunchedEffect(selectedDayId, trackPoints) {
+    // Update photo and video pins
+    LaunchedEffect(styleRef, mediaItems) {
+        val s = styleRef ?: return@LaunchedEffect
+        updateMediaMarkers(s, mediaItems)
+    }
+
+    // Animate camera to fit the track when day, points, or map becomes ready
+    LaunchedEffect(selectedDayId, trackPoints, mapRef) {
         val map = mapRef ?: return@LaunchedEffect
         if (trackPoints.size < 2) return@LaunchedEffect
         val bounds = LatLngBounds.Builder().apply {
@@ -215,6 +244,26 @@ fun MapScreen(
             onDaySelected = viewModel::selectDay,
             modifier = Modifier.align(Alignment.TopCenter)
         )
+
+        // Tracking status indicator
+        Surface(
+            modifier = Modifier
+                .align(Alignment.BottomStart)
+                .padding(start = 16.dp, bottom = 16.dp),
+            shape = MaterialTheme.shapes.small,
+            color = if (isTrackingActive) Color(0xCC1B5E20) else Color(0xCC424242),
+            contentColor = Color.White,
+            tonalElevation = 0.dp,
+        ) {
+            Text(
+                text = if (isTrackingActive)
+                    stringResource(R.string.map_tracking_active, trackPoints.size)
+                else
+                    stringResource(R.string.map_tracking_inactive),
+                style = MaterialTheme.typography.labelSmall,
+                modifier = Modifier.padding(horizontal = 10.dp, vertical = 5.dp)
+            )
+        }
 
         // Voice note FAB
         FloatingActionButton(
@@ -284,16 +333,47 @@ private fun initTrackLayer(style: Style) {
             PropertyFactory.lineJoin(Property.LINE_JOIN_ROUND)
         )
     )
+    style.addSource(GeoJsonSource(TRACK_START_SOURCE, FeatureCollection.fromFeatures(emptyList())))
+    style.addLayer(
+        CircleLayer(TRACK_START_LAYER, TRACK_START_SOURCE).withProperties(
+            PropertyFactory.circleRadius(8f),
+            PropertyFactory.circleColor("#2E7D32"),   // green — start of day
+            PropertyFactory.circleStrokeColor("#FFFFFF"),
+            PropertyFactory.circleStrokeWidth(2f)
+        )
+    )
+    style.addSource(GeoJsonSource(TRACK_END_SOURCE, FeatureCollection.fromFeatures(emptyList())))
+    style.addLayer(
+        CircleLayer(TRACK_END_LAYER, TRACK_END_SOURCE).withProperties(
+            PropertyFactory.circleRadius(8f),
+            PropertyFactory.circleColor("#B71C1C"),   // red — last recorded point
+            PropertyFactory.circleStrokeColor("#FFFFFF"),
+            PropertyFactory.circleStrokeWidth(2f)
+        )
+    )
 }
 
 private fun updateTrackPolyline(style: Style, points: List<TrackPoint>) {
-    val source = style.getSource(TRACK_SOURCE) as? GeoJsonSource ?: return
+    val lineSource  = style.getSource(TRACK_SOURCE)       as? GeoJsonSource ?: return
+    val startSource = style.getSource(TRACK_START_SOURCE) as? GeoJsonSource ?: return
+    val endSource   = style.getSource(TRACK_END_SOURCE)   as? GeoJsonSource ?: return
+
     if (points.size < 2) {
-        source.setGeoJson(FeatureCollection.fromFeatures(emptyList()))
+        lineSource.setGeoJson(FeatureCollection.fromFeatures(emptyList()))
+        startSource.setGeoJson(FeatureCollection.fromFeatures(emptyList()))
+        endSource.setGeoJson(FeatureCollection.fromFeatures(emptyList()))
         return
     }
+
     val coords = points.map { Point.fromLngLat(it.longitude, it.latitude) }
-    source.setGeoJson(Feature.fromGeometry(LineString.fromLngLats(coords)))
+    lineSource.setGeoJson(Feature.fromGeometry(LineString.fromLngLats(coords)))
+
+    startSource.setGeoJson(
+        Feature.fromGeometry(Point.fromLngLat(points.first().longitude, points.first().latitude))
+    )
+    endSource.setGeoJson(
+        Feature.fromGeometry(Point.fromLngLat(points.last().longitude, points.last().latitude))
+    )
 }
 
 private fun initAvailablePoiLayer(style: Style) {
@@ -379,6 +459,52 @@ private fun initVoiceNoteLayer(style: Style) {
             PropertyFactory.circleStrokeWidth(2f)
         )
     )
+}
+
+private fun initMediaLayers(style: Style) {
+    style.addSource(GeoJsonSource(PHOTO_SOURCE, FeatureCollection.fromFeatures(emptyList())))
+    style.addLayer(
+        CircleLayer(PHOTO_LAYER, PHOTO_SOURCE).withProperties(
+            PropertyFactory.circleColor("#00B0FF"),   // cyan-blue — photo
+            PropertyFactory.circleRadius(8f),
+            PropertyFactory.circleStrokeColor("#FFFFFF"),
+            PropertyFactory.circleStrokeWidth(2f)
+        )
+    )
+    style.addSource(GeoJsonSource(VIDEO_SOURCE, FeatureCollection.fromFeatures(emptyList())))
+    style.addLayer(
+        CircleLayer(VIDEO_LAYER, VIDEO_SOURCE).withProperties(
+            PropertyFactory.circleColor("#AA00FF"),   // purple — video
+            PropertyFactory.circleRadius(8f),
+            PropertyFactory.circleStrokeColor("#FFFFFF"),
+            PropertyFactory.circleStrokeWidth(2f)
+        )
+    )
+}
+
+private fun updateMediaMarkers(style: Style, items: List<MediaItem>) {
+    val photoSource = style.getSource(PHOTO_SOURCE) as? GeoJsonSource ?: return
+    val videoSource = style.getSource(VIDEO_SOURCE) as? GeoJsonSource ?: return
+    val photoFeatures = items
+        .filter { it.type == "photo" }
+        .mapNotNull { item ->
+            val lat = item.latitude ?: return@mapNotNull null
+            val lon = item.longitude ?: return@mapNotNull null
+            Feature.fromGeometry(Point.fromLngLat(lon, lat)).apply {
+                addNumberProperty("id", item.id)
+            }
+        }
+    val videoFeatures = items
+        .filter { it.type == "video" }
+        .mapNotNull { item ->
+            val lat = item.latitude ?: return@mapNotNull null
+            val lon = item.longitude ?: return@mapNotNull null
+            Feature.fromGeometry(Point.fromLngLat(lon, lat)).apply {
+                addNumberProperty("id", item.id)
+            }
+        }
+    photoSource.setGeoJson(FeatureCollection.fromFeatures(photoFeatures))
+    videoSource.setGeoJson(FeatureCollection.fromFeatures(videoFeatures))
 }
 
 private fun updateVoiceNoteMarkers(style: Style, notes: List<VoiceNote>) {

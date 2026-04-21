@@ -2,18 +2,21 @@ package com.travellog.app.ui.screens.map
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.travellog.app.data.db.entity.MediaItem
 import com.travellog.app.data.db.entity.PointOfInterest
 import com.travellog.app.data.db.entity.TravelDay
 import com.travellog.app.data.db.entity.TrackPoint
 import com.travellog.app.data.db.entity.VoiceNote
+import com.travellog.app.data.repository.MediaRepository
 import com.travellog.app.data.repository.PoiRepository
 import com.travellog.app.data.repository.TravelDayRepository
 import com.travellog.app.data.repository.TrackingRepository
 import com.travellog.app.data.repository.VoiceNoteRepository
+import com.travellog.app.service.GpsTrackingService
+import com.travellog.app.service.LocationProvider
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
-import android.location.Location
 import javax.inject.Inject
 
 @HiltViewModel
@@ -22,6 +25,8 @@ class MapViewModel @Inject constructor(
     private val trackingRepository: TrackingRepository,
     private val poiRepository: PoiRepository,
     private val voiceNoteRepository: VoiceNoteRepository,
+    private val mediaRepository: MediaRepository,
+    private val locationProvider: LocationProvider,
 ) : ViewModel() {
 
     private val _selectedDayId = MutableStateFlow<Long?>(null)
@@ -55,6 +60,14 @@ class MapViewModel @Inject constructor(
         .flatMapLatest { dayId -> voiceNoteRepository.getVoiceNotesForDay(dayId) }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
 
+    val mediaItems: StateFlow<List<MediaItem>> = _selectedDayId
+        .filterNotNull()
+        .flatMapLatest { dayId -> mediaRepository.getMediaForDay(dayId) }
+        .map { items -> items.filter { it.type == "photo" || it.type == "video" } }
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
+
+    val isTrackingActive: StateFlow<Boolean> = GpsTrackingService.isRunning
+
     init {
         viewModelScope.launch {
             val today = travelDayRepository.getOrCreateToday()
@@ -66,10 +79,19 @@ class MapViewModel @Inject constructor(
         _selectedDayId.value = dayId
     }
 
+    fun refreshPois() {
+        viewModelScope.launch {
+            val dayId    = _selectedDayId.value ?: return@launch
+            val location = locationProvider.getLastLocation() ?: return@launch
+            runCatching { poiRepository.fetchNearbyPois(location.latitude, location.longitude, dayId) }
+        }
+    }
+
     fun checkIn(poiId: Long) {
         viewModelScope.launch {
-            val dayId = _selectedDayId.value ?: return@launch
-            poiRepository.checkIn(poiId, dayId, null)
+            val dayId    = _selectedDayId.value ?: return@launch
+            val location = locationProvider.getLastLocation()
+            poiRepository.checkIn(poiId, dayId, location)
         }
     }
 }

@@ -16,7 +16,7 @@ interface TravelDayDao {
     @Query("SELECT * FROM travel_days WHERE id = :id")
     suspend fun getDayById(id: Long): TravelDay?
 
-    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    @Insert(onConflict = OnConflictStrategy.IGNORE)
     suspend fun insert(day: TravelDay): Long
 
     @Update

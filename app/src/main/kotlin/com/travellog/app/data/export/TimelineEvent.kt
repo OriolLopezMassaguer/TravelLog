@@ -34,5 +34,6 @@ sealed class TimelineEvent {
         override val longitude: Double?,
         val durationSeconds: Int,
         val transcription: String?,
+        val filePath: String,
     ) : TimelineEvent()
 }

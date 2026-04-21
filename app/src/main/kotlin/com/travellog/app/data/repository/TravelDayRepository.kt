@@ -15,15 +15,10 @@ class TravelDayRepository @Inject constructor(
 
     suspend fun getOrCreateToday(): TravelDay {
         val today = LocalDate.now().toString()
-        return dao.getDayByDate(today) ?: run {
-            val id = dao.insert(
-                TravelDay(
-                    date = today,
-                    startedAt = System.currentTimeMillis()
-                )
-            )
-            dao.getDayById(id)!!
-        }
+        dao.getDayByDate(today)?.let { return it }
+        dao.insert(TravelDay(date = today, startedAt = System.currentTimeMillis()))
+        // Works whether we won or lost the insert race — date is unique
+        return dao.getDayByDate(today)!!
     }
 
     suspend fun getByDate(date: String): TravelDay? = dao.getDayByDate(date)
