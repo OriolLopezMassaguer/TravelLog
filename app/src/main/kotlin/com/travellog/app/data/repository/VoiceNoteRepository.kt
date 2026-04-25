@@ -1,6 +1,7 @@
 package com.travellog.app.data.repository
 
 import android.location.Location
+import com.travellog.app.audio.VoskTranscriptionService
 import com.travellog.app.audio.WhisperTranscriptionService
 import com.travellog.app.data.db.dao.CheckInDao
 import com.travellog.app.data.db.dao.MediaItemDao
@@ -20,6 +21,7 @@ class VoiceNoteRepository @Inject constructor(
     private val poiDao: PoiDao,
     private val checkInDao: CheckInDao,
     private val whisperService: WhisperTranscriptionService,
+    private val voskService: VoskTranscriptionService,
 ) {
     fun getVoiceNotesForDay(dayId: Long): Flow<List<VoiceNote>> =
         voiceNoteDao.getVoiceNotesForDay(dayId)
@@ -82,6 +84,13 @@ class VoiceNoteRepository @Inject constructor(
      */
     suspend fun saveTranscription(noteId: Long, text: String) {
         voiceNoteDao.setTranscription(noteId, text)
+    }
+
+    /** Transcribes [voiceNote] using the on-device Vosk model and persists the result. */
+    suspend fun transcribeWithVoskAndSave(voiceNote: VoiceNote): String? {
+        val text = voskService.transcribe(File(voiceNote.filePath)) ?: return null
+        voiceNoteDao.setTranscription(voiceNote.id, text)
+        return text
     }
 
     /**

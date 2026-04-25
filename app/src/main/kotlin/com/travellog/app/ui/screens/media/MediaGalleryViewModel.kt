@@ -1,22 +1,30 @@
 package com.travellog.app.ui.screens.media
 
+import android.content.Context
+import android.net.Uri
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import androidx.media3.common.Player
+import androidx.media3.exoplayer.ExoPlayer
+import com.travellog.app.audio.VoskTranscriptionService
 import com.travellog.app.data.db.entity.MediaItem
 import com.travellog.app.data.db.entity.VoiceNote
 import com.travellog.app.data.repository.MediaRepository
 import com.travellog.app.data.repository.TravelDayRepository
 import com.travellog.app.data.repository.VoiceNoteRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
+import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 
 @HiltViewModel
 class MediaGalleryViewModel @Inject constructor(
+    @ApplicationContext private val context: Context,
     private val mediaRepository: MediaRepository,
     private val voiceNoteRepository: VoiceNoteRepository,
     private val travelDayRepository: TravelDayRepository,
+    private val voskService: VoskTranscriptionService,
 ) : ViewModel() {
 
     private val _currentDayId  = MutableStateFlow<Long?>(null)
@@ -76,5 +84,70 @@ class MediaGalleryViewModel @Inject constructor(
         }
     }
 
+    private val _transcribingIds = MutableStateFlow<Set<Long>>(emptySet())
+    val transcribingIds: StateFlow<Set<Long>> = _transcribingIds.asStateFlow()
+
+    fun transcribeVoiceNote(note: VoiceNote) {
+        if (_transcribingIds.value.contains(note.id)) return
+        viewModelScope.launch {
+            _transcribingIds.update { it + note.id }
+            if (voskService.isModelReady()) {
+                voiceNoteRepository.transcribeWithVoskAndSave(note)
+            } else {
+                voiceNoteRepository.transcribeWithWhisperAndSave(note)
+            }
+            _transcribingIds.update { it - note.id }
+        }
+    }
+
     fun clearMessage() { _importMessage.value = null }
+
+    // ── Playback ──────────────────────────────────────────────────────────────
+
+    private val _playingNoteId = MutableStateFlow<Long?>(null)
+    val playingNoteId: StateFlow<Long?> = _playingNoteId.asStateFlow()
+
+    private val _isPlaying = MutableStateFlow(false)
+    val isPlaying: StateFlow<Boolean> = _isPlaying.asStateFlow()
+
+    private val player: ExoPlayer by lazy {
+        ExoPlayer.Builder(context).build().also { p ->
+            p.addListener(object : Player.Listener {
+                override fun onIsPlayingChanged(isPlaying: Boolean) {
+                    _isPlaying.value = isPlaying
+                }
+                override fun onPlaybackStateChanged(state: Int) {
+                    if (state == Player.STATE_ENDED) {
+                        _playingNoteId.value = null
+                        _isPlaying.value = false
+                    }
+                }
+            })
+        }
+    }
+
+    fun playOrPause(note: VoiceNote) {
+        if (_playingNoteId.value == note.id) {
+            if (player.isPlaying) player.pause() else player.play()
+        } else {
+            player.stop()
+            player.setMediaItem(
+                androidx.media3.common.MediaItem.fromUri(Uri.parse(note.filePath))
+            )
+            player.prepare()
+            player.play()
+            _playingNoteId.value = note.id
+        }
+    }
+
+    fun stopPlayback() {
+        player.stop()
+        _playingNoteId.value = null
+        _isPlaying.value = false
+    }
+
+    override fun onCleared() {
+        super.onCleared()
+        player.release()
+    }
 }

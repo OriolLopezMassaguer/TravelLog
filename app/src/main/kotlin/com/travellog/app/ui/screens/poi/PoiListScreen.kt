@@ -1,8 +1,10 @@
 package com.travellog.app.ui.screens.poi
 
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Refresh
@@ -25,10 +27,12 @@ fun PoiListScreen(
     navController: NavController,
     viewModel: PoiViewModel = hiltViewModel()
 ) {
-    val nearbyPois   by viewModel.nearbyPois.collectAsStateWithLifecycle()
-    val checkedIn    by viewModel.checkedInPois.collectAsStateWithLifecycle()
-    val isLoading    by viewModel.isLoading.collectAsStateWithLifecycle()
-    val error        by viewModel.error.collectAsStateWithLifecycle()
+    val nearbyPois          by viewModel.nearbyPois.collectAsStateWithLifecycle()
+    val checkedIn           by viewModel.checkedInPois.collectAsStateWithLifecycle()
+    val isLoading           by viewModel.isLoading.collectAsStateWithLifecycle()
+    val error               by viewModel.error.collectAsStateWithLifecycle()
+    val availableCategories by viewModel.availableCategories.collectAsStateWithLifecycle()
+    val selectedCategory    by viewModel.selectedCategory.collectAsStateWithLifecycle()
 
     var selectedTab by remember { mutableIntStateOf(0) }
     val tabs = listOf(
@@ -83,9 +87,12 @@ fun PoiListScreen(
             // Content
             when (selectedTab) {
                 0 -> NearbyTab(
-                    pois      = nearbyPois,
-                    isLoading = isLoading,
-                    onCheckIn = viewModel::checkIn
+                    pois               = nearbyPois,
+                    isLoading          = isLoading,
+                    availableCategories = availableCategories,
+                    selectedCategory   = selectedCategory,
+                    onCategorySelected = viewModel::setCategory,
+                    onCheckIn          = viewModel::checkIn
                 )
                 1 -> CheckedInTab(
                     pois     = checkedIn,
@@ -102,26 +109,54 @@ fun PoiListScreen(
 private fun NearbyTab(
     pois: List<PoiWithDistance>,
     isLoading: Boolean,
+    availableCategories: List<String>,
+    selectedCategory: String?,
+    onCategorySelected: (String?) -> Unit,
     onCheckIn: (com.travellog.app.data.db.entity.PointOfInterest) -> Unit
 ) {
-    if (!isLoading && pois.isEmpty()) {
-        EmptyState(stringResource(R.string.poi_empty_nearby))
-        return
-    }
+    Column {
+        if (availableCategories.isNotEmpty()) {
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .horizontalScroll(rememberScrollState())
+                    .padding(horizontal = 12.dp, vertical = 6.dp),
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                FilterChip(
+                    selected = selectedCategory == null,
+                    onClick  = { onCategorySelected(null) },
+                    label    = { Text("All") }
+                )
+                availableCategories.forEach { category ->
+                    FilterChip(
+                        selected = selectedCategory == category,
+                        onClick  = { onCategorySelected(if (selectedCategory == category) null else category) },
+                        label    = { Text(category.replaceFirstChar { it.uppercase() }) }
+                    )
+                }
+            }
+        }
 
-    LazyColumn(
-        contentPadding = PaddingValues(horizontal = 12.dp, vertical = 8.dp),
-        verticalArrangement = Arrangement.spacedBy(8.dp)
-    ) {
-        items(
-            items = pois,
-            key = { it.poi.externalId ?: "nearby_${it.poi.id}_${it.poi.latitude}_${it.poi.longitude}" }
-        ) { item ->
-            PoiCard(
-                poi           = item.poi,
-                distanceMeters = item.distanceMeters.takeIf { it < Float.MAX_VALUE },
-                onCheckIn     = { onCheckIn(item.poi) }
-            )
+        if (!isLoading && pois.isEmpty()) {
+            EmptyState(stringResource(R.string.poi_empty_nearby))
+            return@Column
+        }
+
+        LazyColumn(
+            contentPadding = PaddingValues(horizontal = 12.dp, vertical = 8.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            items(
+                items = pois,
+                key = { it.poi.externalId ?: "nearby_${it.poi.id}_${it.poi.latitude}_${it.poi.longitude}" }
+            ) { item ->
+                PoiCard(
+                    poi            = item.poi,
+                    distanceMeters = item.distanceMeters.takeIf { it < Float.MAX_VALUE },
+                    onCheckIn      = { onCheckIn(item.poi) }
+                )
+            }
         }
     }
 }

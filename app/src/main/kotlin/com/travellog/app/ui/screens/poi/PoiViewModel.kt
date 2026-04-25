@@ -26,18 +26,28 @@ class PoiViewModel @Inject constructor(
     private val _isLoading       = MutableStateFlow(false)
     private val _error           = MutableStateFlow<String?>(null)
     private val _nearbyPois      = MutableStateFlow<List<PointOfInterest>>(emptyList())
+    private val _selectedCategory = MutableStateFlow<String?>(null)
 
-    val isLoading: StateFlow<Boolean> = _isLoading.asStateFlow()
-    val error: StateFlow<String?>     = _error.asStateFlow()
+    val isLoading: StateFlow<Boolean>    = _isLoading.asStateFlow()
+    val error: StateFlow<String?>        = _error.asStateFlow()
+    val selectedCategory: StateFlow<String?> = _selectedCategory.asStateFlow()
 
-    /** Nearby POIs (fetched from Overpass, held in memory) sorted by distance. */
+    /** Nearby POIs (fetched from Overpass, held in memory) sorted by distance, filtered by category. */
     val nearbyPois: StateFlow<List<PoiWithDistance>> = combine(
         _nearbyPois,
-        _currentLocation
-    ) { pois, location ->
-        pois.map { poi -> PoiWithDistance(poi, location?.distanceTo(poi) ?: Float.MAX_VALUE) }
+        _currentLocation,
+        _selectedCategory
+    ) { pois, location, category ->
+        pois
+            .filter { category == null || it.category == category }
+            .map { poi -> PoiWithDistance(poi, location?.distanceTo(poi) ?: Float.MAX_VALUE) }
             .sortedBy { it.distanceMeters }
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
+
+    /** Distinct categories available in the current nearby list. */
+    val availableCategories: StateFlow<List<String>> = _nearbyPois
+        .map { pois -> pois.map { it.category }.distinct().sorted() }
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
 
     /** Today's checked-in POIs in check-in order. */
     val checkedInPois: StateFlow<List<PointOfInterest>> = _currentDayId
@@ -90,6 +100,8 @@ class PoiViewModel @Inject constructor(
             refresh()
         }
     }
+
+    fun setCategory(category: String?) { _selectedCategory.value = category }
 
     fun clearError() { _error.value = null }
 

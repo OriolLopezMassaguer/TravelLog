@@ -20,6 +20,9 @@ class TrackingRepository @Inject constructor(
     suspend fun insertBatch(points: List<TrackPoint>) =
         dao.insertAll(points)
 
+    suspend fun clearTrackForDay(dayId: Long) =
+        dao.deleteForDay(dayId)
+
     /** Returns total track distance in metres for a list of ordered points. */
     fun calculateDistance(points: List<TrackPoint>): Double {
         if (points.size < 2) return 0.0

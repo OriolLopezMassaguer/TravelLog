@@ -127,4 +127,11 @@ class MapViewModel @Inject constructor(
     fun stopTracking(context: android.content.Context) {
         context.stopService(GpsTrackingService.stopIntent(context))
     }
+
+    fun clearTrack() {
+        viewModelScope.launch {
+            val dayId = _selectedDayId.value ?: return@launch
+            trackingRepository.clearTrackForDay(dayId)
+        }
+    }
 }

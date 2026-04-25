@@ -16,7 +16,9 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Download
 import androidx.compose.material.icons.filled.Mic
+import androidx.compose.material.icons.filled.PauseCircle
 import androidx.compose.material.icons.filled.PlayCircle
+import androidx.compose.material.icons.filled.RecordVoiceOver
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -44,10 +46,13 @@ fun MediaGalleryScreen(
     navController: NavController,
     viewModel: MediaGalleryViewModel = hiltViewModel(),
 ) {
-    val mediaItems  by viewModel.mediaItems.collectAsStateWithLifecycle()
-    val voiceNotes  by viewModel.voiceNotes.collectAsStateWithLifecycle()
-    val isImporting by viewModel.isImporting.collectAsStateWithLifecycle()
-    val message     by viewModel.importMessage.collectAsStateWithLifecycle()
+    val mediaItems      by viewModel.mediaItems.collectAsStateWithLifecycle()
+    val voiceNotes      by viewModel.voiceNotes.collectAsStateWithLifecycle()
+    val isImporting     by viewModel.isImporting.collectAsStateWithLifecycle()
+    val message         by viewModel.importMessage.collectAsStateWithLifecycle()
+    val transcribingIds by viewModel.transcribingIds.collectAsStateWithLifecycle()
+    val playingNoteId   by viewModel.playingNoteId.collectAsStateWithLifecycle()
+    val isPlaying       by viewModel.isPlaying.collectAsStateWithLifecycle()
 
     val snackbarHostState = remember { SnackbarHostState() }
     var selectedTab by remember { mutableIntStateOf(0) }
@@ -103,8 +108,13 @@ fun MediaGalleryScreen(
             when (selectedTab) {
                 0 -> PhotoVideoGrid(mediaItems)
                 1 -> VoiceNoteList(
-                    notes    = voiceNotes,
-                    onDelete = viewModel::deleteVoiceNote
+                    notes           = voiceNotes,
+                    transcribingIds = transcribingIds,
+                    playingNoteId   = playingNoteId,
+                    isPlaying       = isPlaying,
+                    onDelete        = viewModel::deleteVoiceNote,
+                    onTranscribe    = viewModel::transcribeVoiceNote,
+                    onPlayPause     = viewModel::playOrPause
                 )
             }
         }
@@ -176,7 +186,12 @@ private fun MediaCell(item: MediaItem) {
 @Composable
 private fun VoiceNoteList(
     notes: List<VoiceNote>,
-    onDelete: (VoiceNote) -> Unit
+    transcribingIds: Set<Long>,
+    playingNoteId: Long?,
+    isPlaying: Boolean,
+    onDelete: (VoiceNote) -> Unit,
+    onTranscribe: (VoiceNote) -> Unit,
+    onPlayPause: (VoiceNote) -> Unit,
 ) {
     if (notes.isEmpty()) {
         EmptyState(stringResource(R.string.media_empty_voice_notes))
@@ -189,8 +204,13 @@ private fun VoiceNoteList(
     ) {
         items(notes, key = { it.id }) { note ->
             VoiceNoteCard(
-                note     = note,
-                onDelete = { onDelete(note) }
+                note           = note,
+                isTranscribing = note.id in transcribingIds,
+                isThisPlaying  = note.id == playingNoteId && isPlaying,
+                isThisLoaded   = note.id == playingNoteId,
+                onDelete       = { onDelete(note) },
+                onTranscribe   = { onTranscribe(note) },
+                onPlayPause    = { onPlayPause(note) },
             )
         }
     }
@@ -199,7 +219,12 @@ private fun VoiceNoteList(
 @Composable
 private fun VoiceNoteCard(
     note: VoiceNote,
-    onDelete: () -> Unit
+    isTranscribing: Boolean,
+    isThisPlaying: Boolean,
+    isThisLoaded: Boolean,
+    onDelete: () -> Unit,
+    onTranscribe: () -> Unit,
+    onPlayPause: () -> Unit,
 ) {
     var showDeleteDialog by remember { mutableStateOf(false) }
 
@@ -236,12 +261,14 @@ private fun VoiceNoteCard(
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(12.dp)
         ) {
-            IconButton(onClick = { /* Play logic if needed */ }) {
+            IconButton(onClick = onPlayPause) {
                 Icon(
-                    imageVector        = Icons.Default.PlayCircle,
-                    contentDescription = null,
-                    tint               = MaterialTheme.colorScheme.primary,
-                    modifier           = Modifier.size(36.dp)
+                    imageVector = if (isThisPlaying) Icons.Default.PauseCircle
+                                  else Icons.Default.PlayCircle,
+                    contentDescription = if (isThisPlaying) "Pause" else "Play",
+                    tint = if (isThisLoaded) MaterialTheme.colorScheme.primary
+                           else MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.size(36.dp)
                 )
             }
             Column(modifier = Modifier.weight(1f)) {
@@ -266,6 +293,25 @@ private fun VoiceNoteCard(
                     style = MaterialTheme.typography.labelMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
+                if (note.transcription.isNullOrBlank()) {
+                    if (isTranscribing) {
+                        Box(
+                            modifier = Modifier.size(48.dp),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            CircularProgressIndicator(modifier = Modifier.size(20.dp), strokeWidth = 2.dp)
+                        }
+                    } else {
+                        IconButton(onClick = onTranscribe) {
+                            Icon(
+                                imageVector        = Icons.Default.RecordVoiceOver,
+                                contentDescription = "Transcribe",
+                                tint               = MaterialTheme.colorScheme.primary,
+                                modifier           = Modifier.size(20.dp)
+                            )
+                        }
+                    }
+                }
                 IconButton(onClick = { showDeleteDialog = true }) {
                     Icon(
                         imageVector = Icons.Default.Delete,

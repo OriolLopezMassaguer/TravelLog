@@ -7,8 +7,10 @@ import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts.RequestMultiplePermissions
 import androidx.compose.foundation.layout.*
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.DeleteSweep
 import androidx.compose.material.icons.filled.Mic
 import androidx.compose.material.icons.filled.MyLocation
+import androidx.compose.material.icons.filled.Stop
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -97,6 +99,7 @@ fun MapScreen(
     val isTrackingActive  by viewModel.isTrackingActive.collectAsStateWithLifecycle()
 
     var showRecorder by remember { mutableStateOf(false) }
+    var showClearTrackDialog by remember { mutableStateOf(false) }
     // Holds the POI the user tapped on the map, triggering the check-in dialog
     val checkinDialogPoi = remember { mutableStateOf<PointOfInterest?>(null) }
     val deleteCheckinPoi = remember { mutableStateOf<PointOfInterest?>(null) }
@@ -271,24 +274,47 @@ fun MapScreen(
             modifier = Modifier.align(Alignment.TopCenter)
         )
 
-        // Tracking status indicator
-        Surface(
+        // Tracking status indicator + stop button
+        Row(
             modifier = Modifier
                 .align(Alignment.BottomStart)
                 .padding(start = 16.dp, bottom = 16.dp),
-            shape = MaterialTheme.shapes.small,
-            color = if (isTrackingActive) Color(0xCC1B5E20) else Color(0xCC424242),
-            contentColor = Color.White,
-            tonalElevation = 0.dp,
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(8.dp)
         ) {
-            Text(
-                text = if (isTrackingActive)
-                    stringResource(R.string.map_tracking_active, trackPoints.size)
-                else
-                    stringResource(R.string.map_tracking_inactive),
-                style = MaterialTheme.typography.labelSmall,
-                modifier = Modifier.padding(horizontal = 10.dp, vertical = 5.dp)
-            )
+            Surface(
+                shape = MaterialTheme.shapes.small,
+                color = if (isTrackingActive) Color(0xCC1B5E20) else Color(0xCC424242),
+                contentColor = Color.White,
+                tonalElevation = 0.dp,
+            ) {
+                Text(
+                    text = if (isTrackingActive)
+                        stringResource(R.string.map_tracking_active, trackPoints.size)
+                    else
+                        stringResource(R.string.map_tracking_inactive),
+                    style = MaterialTheme.typography.labelSmall,
+                    modifier = Modifier.padding(horizontal = 10.dp, vertical = 5.dp)
+                )
+            }
+            if (isTrackingActive) {
+                SmallFloatingActionButton(
+                    onClick = { viewModel.stopTracking(context) },
+                    containerColor = MaterialTheme.colorScheme.error,
+                    contentColor = Color.White
+                ) {
+                    Icon(Icons.Default.Stop, contentDescription = "Stop tracking")
+                }
+            }
+            if (trackPoints.isNotEmpty()) {
+                SmallFloatingActionButton(
+                    onClick = { showClearTrackDialog = true },
+                    containerColor = MaterialTheme.colorScheme.errorContainer,
+                    contentColor = MaterialTheme.colorScheme.onErrorContainer
+                ) {
+                    Icon(Icons.Default.DeleteSweep, contentDescription = "Clear track")
+                }
+            }
         }
 
         // Voice note FAB
@@ -375,6 +401,27 @@ fun MapScreen(
                 },
                 dismissButton = {
                     TextButton(onClick = { deleteVoiceNote.value = null }) { Text(stringResource(R.string.action_cancel)) }
+                }
+            )
+        }
+
+        // Clear track confirmation dialog
+        if (showClearTrackDialog) {
+            AlertDialog(
+                onDismissRequest = { showClearTrackDialog = false },
+                title = { Text("Clear track?") },
+                text = { Text("This will permanently delete all ${trackPoints.size} GPS points recorded for this day.") },
+                confirmButton = {
+                    Button(
+                        onClick = {
+                            viewModel.clearTrack()
+                            showClearTrackDialog = false
+                        },
+                        colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error)
+                    ) { Text("Clear") }
+                },
+                dismissButton = {
+                    TextButton(onClick = { showClearTrackDialog = false }) { Text(stringResource(R.string.action_cancel)) }
                 }
             )
         }

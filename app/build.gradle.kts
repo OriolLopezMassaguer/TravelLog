@@ -142,6 +142,9 @@ dependencies {
     // JSON
     implementation(libs.gson)
 
+    // Vosk — on-device offline speech recognition
+    implementation("com.alphacephei:vosk-android:0.3.47")
+
     // Test
     testImplementation(libs.junit)
     androidTestImplementation(libs.test.ext.junit)
