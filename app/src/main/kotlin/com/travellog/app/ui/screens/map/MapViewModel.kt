@@ -1,5 +1,6 @@
 package com.travellog.app.ui.screens.map
 
+import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.travellog.app.data.db.entity.MediaItem
@@ -77,11 +78,26 @@ class MapViewModel @Inject constructor(
     }
 
     fun refreshPois() {
+        Log.d("MapViewModel", "refreshPois called")
         viewModelScope.launch {
-            val dayId    = _selectedDayId.value ?: return@launch
-            val location = locationProvider.getLastLocation() ?: return@launch
+            val dayId    = _selectedDayId.value
+            if (dayId == null) {
+                Log.w("MapViewModel", "refreshPois: dayId is null")
+                return@launch
+            }
+            val location = locationProvider.getLastLocation()
+            if (location == null) {
+                Log.w("MapViewModel", "refreshPois: location is null")
+                return@launch
+            }
+            
+            Log.d("MapViewModel", "Fetching POIs for location: ${location.latitude}, ${location.longitude}")
             runCatching {
-                _availablePois.value = poiRepository.fetchNearbyPois(location.latitude, location.longitude, dayId)
+                val pois = poiRepository.fetchNearbyPois(location.latitude, location.longitude, dayId)
+                Log.d("MapViewModel", "Fetched ${pois.size} POIs")
+                _availablePois.value = pois
+            }.onFailure {
+                Log.e("MapViewModel", "Error fetching POIs", it)
             }
         }
     }
