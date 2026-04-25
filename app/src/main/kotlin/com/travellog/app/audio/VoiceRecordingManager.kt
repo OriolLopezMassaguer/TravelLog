@@ -1,8 +1,15 @@
 package com.travellog.app.audio
 
+import android.content.BroadcastReceiver
 import android.content.Context
+import android.content.Intent
+import android.content.IntentFilter
+import android.media.AudioAttributes
+import android.media.AudioFocusRequest
+import android.media.AudioManager
 import android.media.MediaRecorder
 import android.os.Build
+import androidx.core.content.ContextCompat
 import dagger.hilt.android.qualifiers.ApplicationContext
 import java.io.File
 import java.text.SimpleDateFormat
@@ -10,6 +17,9 @@ import java.util.Date
 import java.util.Locale
 import javax.inject.Inject
 import javax.inject.Singleton
+import kotlinx.coroutines.flow.MutableSharedFlow
+import kotlinx.coroutines.flow.SharedFlow
+import kotlinx.coroutines.flow.asSharedFlow
 
 data class RecordingResult(val file: File, val durationSeconds: Int)
 
@@ -21,6 +31,45 @@ class VoiceRecordingManager @Inject constructor(
     private var currentFile: File? = null
     private var startTimeMs: Long = 0L
 
+    private val audioManager = context.getSystemService(Context.AUDIO_SERVICE) as AudioManager
+
+    // Emits whenever the OS takes audio focus away or audio routing changes (e.g. BT disconnect).
+    private val _interruptions = MutableSharedFlow<Unit>(extraBufferCapacity = 1)
+    val interruptions: SharedFlow<Unit> = _interruptions.asSharedFlow()
+
+    private val focusChangeListener = AudioManager.OnAudioFocusChangeListener { change ->
+        if (change == AudioManager.AUDIOFOCUS_LOSS ||
+            change == AudioManager.AUDIOFOCUS_LOSS_TRANSIENT
+        ) {
+            _interruptions.tryEmit(Unit)
+        }
+    }
+
+    private val audioFocusRequest: AudioFocusRequest? by lazy {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            AudioFocusRequest.Builder(AudioManager.AUDIOFOCUS_GAIN)
+                .setAudioAttributes(
+                    AudioAttributes.Builder()
+                        .setUsage(AudioAttributes.USAGE_MEDIA)
+                        .setContentType(AudioAttributes.CONTENT_TYPE_SPEECH)
+                        .build()
+                )
+                .setAcceptsDelayedFocusGain(false)
+                .setOnAudioFocusChangeListener(focusChangeListener)
+                .build()
+        } else null
+    }
+
+    // Fired when BT headset disconnects or headphones are unplugged mid-recording.
+    private val noisyReceiver = object : BroadcastReceiver() {
+        override fun onReceive(ctx: Context, intent: Intent) {
+            if (intent.action == AudioManager.ACTION_AUDIO_BECOMING_NOISY && isRecording) {
+                _interruptions.tryEmit(Unit)
+            }
+        }
+    }
+    private var noisyReceiverRegistered = false
+
     val isRecording: Boolean get() = recorder != null
 
     /**
@@ -30,6 +79,9 @@ class VoiceRecordingManager @Inject constructor(
      */
     fun startRecording(date: String): File {
         check(!isRecording) { "Already recording" }
+
+        requestAudioFocus()
+        registerNoisyReceiver()
 
         val dir  = getVoiceDir(date).also { it.mkdirs() }
         val ts   = SimpleDateFormat("HHmmss", Locale.US).format(Date())
@@ -65,6 +117,7 @@ class VoiceRecordingManager @Inject constructor(
 
         recorder    = null
         currentFile = null
+        releaseAudioSession()
 
         return try {
             rec.stop()
@@ -86,6 +139,53 @@ class VoiceRecordingManager @Inject constructor(
         recorder = null
         currentFile?.delete()
         currentFile = null
+        releaseAudioSession()
+    }
+
+    private fun requestAudioFocus() {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            audioFocusRequest?.let { audioManager.requestAudioFocus(it) }
+        } else {
+            @Suppress("DEPRECATION")
+            audioManager.requestAudioFocus(
+                focusChangeListener,
+                AudioManager.STREAM_MUSIC,
+                AudioManager.AUDIOFOCUS_GAIN,
+            )
+        }
+    }
+
+    private fun abandonAudioFocus() {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            audioFocusRequest?.let { audioManager.abandonAudioFocusRequest(it) }
+        } else {
+            @Suppress("DEPRECATION")
+            audioManager.abandonAudioFocus(focusChangeListener)
+        }
+    }
+
+    private fun registerNoisyReceiver() {
+        if (!noisyReceiverRegistered) {
+            ContextCompat.registerReceiver(
+                context,
+                noisyReceiver,
+                IntentFilter(AudioManager.ACTION_AUDIO_BECOMING_NOISY),
+                ContextCompat.RECEIVER_NOT_EXPORTED,
+            )
+            noisyReceiverRegistered = true
+        }
+    }
+
+    private fun unregisterNoisyReceiver() {
+        if (noisyReceiverRegistered) {
+            try { context.unregisterReceiver(noisyReceiver) } catch (_: Exception) {}
+            noisyReceiverRegistered = false
+        }
+    }
+
+    private fun releaseAudioSession() {
+        unregisterNoisyReceiver()
+        abandonAudioFocus()
     }
 
     private fun createRecorder(): MediaRecorder =

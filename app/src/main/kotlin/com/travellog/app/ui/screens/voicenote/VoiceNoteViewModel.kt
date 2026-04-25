@@ -60,6 +60,14 @@ class VoiceNoteViewModel @Inject constructor(
     private val _state = MutableStateFlow<RecordingState>(RecordingState.Idle)
     val state: StateFlow<RecordingState> = _state.asStateFlow()
 
+    init {
+        viewModelScope.launch {
+            recorder.interruptions.collect {
+                if (_state.value is RecordingState.Recording) stopRecording()
+            }
+        }
+    }
+
     fun startRecording() {
         viewModelScope.launch {
             val location = locationProvider.getLastLocation()
